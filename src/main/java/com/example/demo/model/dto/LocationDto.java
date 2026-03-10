@@ -14,7 +14,7 @@ import lombok.Setter;
 public class LocationDto {
 
     @NotNull(message = "Location id cannot be empty")
-    private long id;
+    private Long id;
 
     @NotBlank(message = "Name cannot be empty")
     private String name;
@@ -22,7 +22,7 @@ public class LocationDto {
     @NotBlank(message = "Address cannot be empty")
     private String address;
 
-    @Min(value = 1, message = "Capacity must be greater than 0")
+    @Min(value = 5, message = "Capacity must be at least 5")
     private int capacity;
 
     private String description;

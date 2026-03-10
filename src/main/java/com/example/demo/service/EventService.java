@@ -53,7 +53,7 @@ public class EventService {
                 eventRepository.delete(item);
                 return eventId;
             })
-            .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Мероприятие не найдено"));
+            .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Event not found"));
     }
 
     /**
@@ -65,7 +65,7 @@ public class EventService {
         log.info("Getting event with id = '{}'", eventId);
         return eventRepository.findById(eventId)
                 .map(EventConverter::toDto)
-                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Мероприятие не найдено"));
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Event not found"));
     }
 
     /**
@@ -78,12 +78,12 @@ public class EventService {
         log.info("Updating event with id = '{}'", eventId);
         Event event = eventRepository
                 .findById(eventId)
-                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Мероприятие не найдено"));
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Event not found"));
 
         if (updateDto.getMaxPlaces() < event.getOccupiedPlaces()) {
             throw new ServiceException(
                     HttpStatus.BAD_REQUEST.value(),
-                    "Количество доступных мест не должно быть меньше количества регистраций");
+                    "The number of available seats must not be less than the number of registrations");
         }
 
         Event toUpdate = Event.builder()
@@ -182,7 +182,7 @@ public class EventService {
                 .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Event not found"));
 
         if (event.getDate().isBefore(LocalDateTime.now())) {
-            throw new ServiceException(HttpStatus.BAD_REQUEST.value(), "Мероприятие уже началось или закончилось");
+            throw new ServiceException(HttpStatus.BAD_REQUEST.value(), "Event has already started or ended");
         }
 
         registrationRepository
@@ -191,14 +191,14 @@ public class EventService {
                     registrationRepository.delete(r);
                     return r;
                 })
-                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Регистрация не найдена"));
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Registration not found"));
 
         event.setOccupiedPlaces(event.getOccupiedPlaces() - 1);
         eventRepository.save(event);
     }
 
     /**
-     * Find registrations according to filter criteria
+     * Find registrations with respect to filter criteria
      * @param userId
      * @return
      */
@@ -217,11 +217,9 @@ public class EventService {
      */
     public List<RegistrationDto> getRegistrations() {
         log.info("Getting all registrations");
-        List<RegistrationDto> result = new ArrayList<>();
-        registrationRepository
-                .findAll().forEach(
-                        r -> result.add(RegistrationConverter.toDto(r)));
-        return result;
+        return registrationRepository.findAll().stream()
+                .map(RegistrationConverter::toDto)
+                .toList();
     }
 
 }

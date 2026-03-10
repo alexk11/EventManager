@@ -6,7 +6,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -35,7 +34,6 @@ public class Location {
     private String address;
 
     @Column(nullable = false)
-    @Min(value = 5, message = "Capacity must be at least 5")
     private Integer capacity;
 
     @Column

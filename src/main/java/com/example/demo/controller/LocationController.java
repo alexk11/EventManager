@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -40,17 +41,15 @@ public class LocationController {
     public ResponseEntity<LocationDto> createLocation(
             @RequestBody @Valid LocationDto locationDto) {
         return ResponseEntity
-                .status(HttpStatus.OK)
+                .status(HttpStatus.CREATED)
                 .body(locationService.createLocation(locationDto));
     }
 
     @DeleteMapping("/{locationId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     //@PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<LocationDto> deleteLocation(
-            @PathVariable long locationId) {
-        return ResponseEntity
-                .status(204)
-                .body(locationService.deleteLocation(locationId));
+    public void deleteLocation(@PathVariable long locationId) {
+        locationService.deleteLocation(locationId);
     }
 
     @GetMapping("/{locationId}")

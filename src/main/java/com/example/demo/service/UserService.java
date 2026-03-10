@@ -40,7 +40,7 @@ public class UserService {
         return userRepository
                 .findById(userId)
                 .map(UserConverter::toDto)
-                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Пользователь не найден"));
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "User not found"));
     }
 
     /**
@@ -51,7 +51,7 @@ public class UserService {
     public String authUser(UserCredentials userCredentials) {
         log.info("Authenticating user '{}'", userCredentials.getLogin());
         if (userRepository.findByLogin(userCredentials.getLogin()).isEmpty()) {
-            throw new ServiceException(HttpStatus.NOT_FOUND.value(), "Пользователь не найден");
+            throw new ServiceException(HttpStatus.NOT_FOUND.value(), "User not found");
         }
         return "JWT token";
     }

@@ -9,8 +9,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
 import java.util.List;
 
 
@@ -28,10 +26,9 @@ public class LocationService {
      */
     public List<LocationDto> getLocations() {
         log.info("Getting all locations");
-        List<LocationDto> result = new ArrayList<>();
-        locationRepository.findAll().forEach(
-                item -> result.add(LocationConverter.toDto(item)));
-        return result;
+        return locationRepository.findAll().stream()
+                .map(LocationConverter::toDto)
+                .toList();
     }
 
     /**
@@ -58,7 +55,7 @@ public class LocationService {
                     locationRepository.delete(item);
                     return LocationConverter.toDto(item);
                 })
-                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Локация не найдена"));
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Location not found"));
     }
 
     /**
@@ -72,7 +69,7 @@ public class LocationService {
         return locationRepository
                 .findById(locationId)
                 .map(LocationConverter::toDto)
-                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Локация не найдена"));
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Location not found"));
     }
 
     /**
@@ -92,7 +89,7 @@ public class LocationService {
         if (updateDto.getCapacity() < location.getCapacity()) {
             throw new ServiceException(
                     HttpStatus.BAD_REQUEST.value(),
-                    "Нельзя менять вместимость локации в меньшую сторону");
+                    "Location capacity cannot be decreased");
         }
 
         Location toUpdate = Location.builder()
