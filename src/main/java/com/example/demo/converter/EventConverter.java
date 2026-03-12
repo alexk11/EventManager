@@ -2,12 +2,12 @@ package com.example.demo.converter;
 
 import com.example.demo.entity.Event;
 import com.example.demo.entity.Registration;
+import com.example.demo.exception.ServiceException;
 import com.example.demo.model.EventStatus;
 import com.example.demo.model.dto.EventCreateRequestDto;
 import com.example.demo.model.dto.EventDto;
 import com.example.demo.model.dto.RegistrationDto;
-
-import java.util.ArrayList;
+import org.springframework.http.HttpStatus;
 import java.util.List;
 
 
@@ -59,19 +59,21 @@ public class EventConverter {
     }
 
     private static List<RegistrationDto> toDtoList(List<Registration> registrations) {
-        List<RegistrationDto> result = new ArrayList<>();
-        if (registrations != null) {
-            registrations.forEach(r -> result.add(RegistrationConverter.toDto(r)));
+        if (registrations == null) {
+            throw new ServiceException(HttpStatus.INTERNAL_SERVER_ERROR.value(), "No registrations found");
         }
-        return result;
+        return registrations.stream()
+                .map(RegistrationConverter::toDto)
+                .toList();
     }
 
     private static List<Registration> toEntityList(List<RegistrationDto> registrations) {
-        List<Registration> result = new ArrayList<>();
-        if (registrations != null) {
-            registrations.forEach(r -> result.add(RegistrationConverter.toEntity(r)));
+        if (registrations == null) {
+            throw new ServiceException(HttpStatus.INTERNAL_SERVER_ERROR.value(), "No registrations found");
         }
-        return result;
+        return registrations.stream()
+                .map(RegistrationConverter::toEntity)
+                .toList();
     }
 
 }
