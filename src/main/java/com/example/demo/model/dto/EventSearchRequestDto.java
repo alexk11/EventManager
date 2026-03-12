@@ -49,7 +49,7 @@ public class EventSearchRequestDto {
     private int locationId;
 
     @NotNull(message = "Owner Id cannot be empty")
-    private long ownerId;
+    private Long ownerId;
 
     private EventStatus eventStatus;
 }

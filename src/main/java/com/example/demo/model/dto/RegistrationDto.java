@@ -15,13 +15,13 @@ import java.time.LocalDateTime;
 public class RegistrationDto {
 
     @NotNull(message = "Registration id cannot be null")
-    private long id;
+    private Long id;
 
     @NotNull(message = "Event id cannot be null")
-    private long eventId;
+    private Long eventId;
 
     @NotNull(message = "User id cannot be null")
-    private long userId;
+    private Long userId;
 
     @NotNull(message = "Registration date cannot be null")
     @DateTimeFormat(pattern = "YYYY-MM-DDThh:mm:ss")

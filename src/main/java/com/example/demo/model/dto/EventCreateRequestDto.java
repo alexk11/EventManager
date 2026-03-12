@@ -38,5 +38,5 @@ public class EventCreateRequestDto {
     private int locationId;
 
     @NotNull
-    private long ownerId;
+    private Long ownerId;
 }
