@@ -27,7 +27,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Table(name = "events")
 @AllArgsConstructor
-public class Event {
+public class EventEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -63,5 +63,5 @@ public class Event {
 
     @JsonIgnore
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Registration> registrations;
+    private List<RegistrationEntity> registrations;
 }

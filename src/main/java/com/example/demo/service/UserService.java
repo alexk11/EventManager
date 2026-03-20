@@ -1,15 +1,23 @@
 package com.example.demo.service;
 
 import com.example.demo.converter.UserConverter;
-import com.example.demo.entity.User;
+import com.example.demo.entity.UserEntity;
 import com.example.demo.exception.ServiceException;
+import com.example.demo.model.JwtResponse;
+import com.example.demo.model.Role;
 import com.example.demo.model.UserCredentials;
 import com.example.demo.model.dto.UserDto;
+import com.example.demo.model.dto.UserRegistrationDto;
 import com.example.demo.repository.UserRepository;
+import com.example.demo.security.CustomAuthenticationProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.nio.CharBuffer;
+import java.util.Optional;
 
 
 @Slf4j
@@ -18,23 +26,25 @@ import org.springframework.stereotype.Service;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final CustomAuthenticationProvider authProvider;
+    private final PasswordEncoder passwordEncoder;
 
-    /**
-     * Create new user
-     * @param userDto
-     * @return
-     */
-    public UserDto createUser(UserDto userDto) {
-        log.info("Creating user with the login '{}'", userDto.getLogin());
-        User userEntity = userRepository.save(UserConverter.toEntity(userDto));
+    public UserDto createUser(UserRegistrationDto dto) {
+        log.info("Creating user with login '{}'", dto.getLogin());
+        if (userRepository.findByLogin(dto.getLogin()).isPresent()) {
+            throw new IllegalArgumentException("Username already taken");
+        }
+        var userToSave = UserEntity.builder()
+                .login(dto.getLogin())
+                .passwordHash(passwordEncoder.encode(dto.getPassword()))
+                .age(dto.getAge())
+                .role(Role.USER.name())
+                .build();
+        UserEntity userEntity = userRepository.save(userToSave);
         return UserConverter.toDto(userEntity);
     }
 
-    /**
-     * Get user data
-     * @param userId
-     * @return
-     */
+
     public UserDto getUser(long userId) {
         log.info("Getting user by the id = {}", userId);
         return userRepository
@@ -43,16 +53,42 @@ public class UserService {
                 .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "User not found"));
     }
 
-    /**
-     * Authenticate user and return a JWT token
-     * @param userCredentials
-     * @return
-     */
-    public String authUser(UserCredentials userCredentials) {
+
+    public JwtResponse authUser(UserCredentials userCredentials) {
         log.info("Authenticating user '{}'", userCredentials.getLogin());
-        if (userRepository.findByLogin(userCredentials.getLogin()).isEmpty()) {
-            throw new ServiceException(HttpStatus.NOT_FOUND.value(), "User not found");
+
+        Optional<UserEntity> dbUser = userRepository.findByLogin(userCredentials.getLogin());
+        if (dbUser.isPresent()) {
+            if (passwordEncoder.matches(
+                    CharBuffer.wrap(userCredentials.getPassword()), dbUser.get().getPasswordHash())) {
+                return new JwtResponse(authProvider.createToken(UserConverter.toDto(dbUser.get())));
+            }
         }
-        return "JWT token";
+        throw new ServiceException(
+                HttpStatus.UNAUTHORIZED.value(),
+                "User not found or password is invalid");
     }
+
+
+    public UserDto findByLogin(String login) {
+        log.info("Getting user with login '{}'", login);
+        var dbUser = userRepository
+                .findByLogin(login)
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "User not found"));
+        return UserConverter.toDto(dbUser);
+    }
+
+
+    public boolean isUserExistsByLogin(String login) {
+        log.info("Checking if user with login '{}' exists", login);
+        return userRepository.findByLogin(login).isPresent();
+    }
+
+
+    public UserDto saveUser(UserDto userDto) {
+        log.info("Saving user '{}'", userDto.getLogin());
+        var savedUser = userRepository.save(UserConverter.toEntity(userDto));
+        return UserConverter.toDto(savedUser);
+    }
+
 }

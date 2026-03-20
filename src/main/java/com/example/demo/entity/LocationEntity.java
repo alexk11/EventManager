@@ -20,7 +20,7 @@ import lombok.Setter;
 @RequiredArgsConstructor
 @Table(name = "locations")
 @AllArgsConstructor
-public class Location {
+public class LocationEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

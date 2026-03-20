@@ -1,6 +1,7 @@
-package com.example.demo.model.dto;
+package com.example.demo.model.dto.event;
 
 import com.example.demo.model.EventStatus;
+import com.example.demo.model.dto.RegistrationDto;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -30,7 +31,7 @@ public class EventDto {
     @NotBlank(message = "Name cannot be empty")
     private String name;
 
-    @NotNull(message = "Owner Id cannot be empty")
+    @NotNull(message = "Owner id cannot be empty")
     private Long ownerId;
 
     @Min(value = 1, message = "Number of places must be greater than 0")

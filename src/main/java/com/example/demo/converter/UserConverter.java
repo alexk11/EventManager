@@ -1,13 +1,16 @@
 package com.example.demo.converter;
 
-import com.example.demo.entity.User;
+import com.example.demo.entity.UserEntity;
 import com.example.demo.model.Role;
 import com.example.demo.model.dto.UserDto;
+import com.example.demo.model.dto.UserRegistrationDto;
+import org.springframework.stereotype.Component;
 
 
+@Component
 public class UserConverter {
 
-    public static UserDto toDto(User entity) {
+    public static UserDto toDto(UserEntity entity) {
         return UserDto.builder()
                 .id(entity.getId())
                 .login(entity.getLogin())
@@ -16,11 +19,21 @@ public class UserConverter {
                 .build();
     }
 
-    public static User toEntity(UserDto dto) {
-        return User.builder()
+    public static UserEntity toEntity(UserDto dto) {
+        return UserEntity.builder()
                 .login(dto.getLogin())
+                .passwordHash(dto.getPasswordHash())
                 .age(dto.getAge())
                 .role(dto.getRole().name())
+                .build();
+    }
+
+    public static UserEntity toEntity(UserRegistrationDto dto) {
+        return UserEntity.builder()
+                .login(dto.getLogin())
+                .passwordHash(dto.getPassword())
+                .age(dto.getAge())
+                .role(Role.USER.name())
                 .build();
     }
 

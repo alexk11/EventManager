@@ -1,13 +1,16 @@
 package com.example.demo.controller;
 
+import com.example.demo.model.JwtResponse;
 import com.example.demo.model.UserCredentials;
 import com.example.demo.model.dto.UserDto;
+import com.example.demo.model.dto.UserRegistrationDto;
 import com.example.demo.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,27 +28,32 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping
-    //@PreAuthorize("hasAnyRole('ADMIN','USER')")
-    public ResponseEntity<UserDto> createUser(@RequestBody @Valid UserDto userDto) {
+    public ResponseEntity<UserDto> registerUser(
+            @RequestBody @Valid UserRegistrationDto registrationDto) {
+        log.info("POST request to register user: userDto = {}", registrationDto);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(userService.createUser(userDto));
+                .body(userService.createUser(registrationDto));
     }
 
     @GetMapping("/{userId}")
-    //@PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserDto> getUser(@PathVariable long userId) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserDto> getUser(
+            @PathVariable long userId) {
+        log.info("GET request to get user: userId = {}", userId);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(userService.getUser(userId));
     }
 
     @PostMapping("/auth")
-    //@PreAuthorize("hasAnyRole('ADMIN','USER')")
-    public ResponseEntity<String> authUser(@RequestBody UserCredentials authDto) {
+    public ResponseEntity<JwtResponse> authUser(
+            @RequestBody @Valid UserCredentials userCredentials) {
+        log.info("POST request to authenticate user: userCredentials = {}",
+                userCredentials);
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(userService.authUser(authDto));
+                .body(userService.authUser(userCredentials));
     }
 
 }

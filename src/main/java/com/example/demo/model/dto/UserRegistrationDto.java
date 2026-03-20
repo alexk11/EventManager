@@ -1,23 +1,26 @@
-package com.example.demo.model;
+package com.example.demo.model.dto;
 
 import jakarta.validation.constraints.NotEmpty;
-import lombok.AllArgsConstructor;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import lombok.Builder;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
 
 @Getter
 @Setter
 @Builder
-@RequiredArgsConstructor
-@AllArgsConstructor
-public class UserCredentials {
+public class UserRegistrationDto {
 
     @NotEmpty(message = "Login cannot be empty")
+    @Size(min = 5)
     private String login;
 
     @NotEmpty(message = "Password cannot be empty")
+    @Size(min = 8)
     private String password;
+
+    @Positive(message = "Age must be greater than zero")
+    private int age;
 }

@@ -1,19 +1,21 @@
 package com.example.demo.converter;
 
-import com.example.demo.entity.Event;
-import com.example.demo.entity.Registration;
+import com.example.demo.entity.EventEntity;
+import com.example.demo.entity.RegistrationEntity;
 import com.example.demo.exception.ServiceException;
 import com.example.demo.model.EventStatus;
-import com.example.demo.model.dto.EventCreateRequestDto;
-import com.example.demo.model.dto.EventDto;
+import com.example.demo.model.dto.event.EventCreateRequestDto;
+import com.example.demo.model.dto.event.EventDto;
 import com.example.demo.model.dto.RegistrationDto;
 import org.springframework.http.HttpStatus;
+
+import java.util.ArrayList;
 import java.util.List;
 
 
 public class EventConverter {
 
-    public static EventDto toDto(Event entity) {
+    public static EventDto toDto(EventEntity entity) {
         return EventDto.builder()
                 .id(entity.getId())
                 .name(entity.getName())
@@ -29,25 +31,9 @@ public class EventConverter {
                 .build();
     }
 
-    public static Event toEntity(EventDto dto) {
-        return Event.builder()
+    public static EventEntity toEntity(EventCreateRequestDto dto) {
+        return EventEntity.builder()
                 .name(dto.getName())
-                .ownerId(dto.getOwnerId())
-                .maxPlaces(dto.getMaxPlaces())
-                .occupiedPlaces(dto.getOccupiedPlaces())
-                .date(dto.getDate())
-                .cost(dto.getCost())
-                .duration(dto.getDuration())
-                .locationId(dto.getLocationId())
-                .status(dto.getStatus().name())
-                .registrations(toEntityList(dto.getRegistrations()))
-                .build();
-    }
-
-    public static Event toEntity(EventCreateRequestDto dto) {
-        return Event.builder()
-                .name(dto.getName())
-                .ownerId(dto.getOwnerId())
                 .maxPlaces(dto.getMaxPlaces())
                 .occupiedPlaces(0)
                 .date(dto.getDate())
@@ -58,16 +44,16 @@ public class EventConverter {
                 .build();
     }
 
-    private static List<RegistrationDto> toDtoList(List<Registration> registrations) {
+    private static List<RegistrationDto> toDtoList(List<RegistrationEntity> registrations) {
         if (registrations == null) {
-            throw new ServiceException(HttpStatus.INTERNAL_SERVER_ERROR.value(), "No registrations found");
+            return new ArrayList<>();
         }
         return registrations.stream()
                 .map(RegistrationConverter::toDto)
                 .toList();
     }
 
-    private static List<Registration> toEntityList(List<RegistrationDto> registrations) {
+    private static List<RegistrationEntity> toEntityList(List<RegistrationDto> registrations) {
         if (registrations == null) {
             throw new ServiceException(HttpStatus.INTERNAL_SERVER_ERROR.value(), "No registrations found");
         }

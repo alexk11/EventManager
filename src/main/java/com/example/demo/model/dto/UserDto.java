@@ -27,6 +27,9 @@ public class UserDto {
     @NotBlank(message = "Login cannot be empty")
     private String login;
 
+    @NotBlank(message = "Password cannot be empty")
+    private String passwordHash;
+
     @Positive(message = "Age must be greater than zero")
     private int age;
 
