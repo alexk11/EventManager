@@ -17,7 +17,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.nio.CharBuffer;
-import java.util.Optional;
 
 
 @Slf4j
@@ -31,7 +30,7 @@ public class UserService {
 
     public UserDto createUser(UserRegistrationDto dto) {
         log.info("Creating user with login '{}'", dto.getLogin());
-        if (userRepository.findByLogin(dto.getLogin()).isPresent()) {
+        if (userRepository.existsByLogin(dto.getLogin())) {
             throw new IllegalArgumentException("Username already taken");
         }
         var userToSave = UserEntity.builder()
@@ -56,17 +55,16 @@ public class UserService {
 
     public JwtResponse authUser(UserCredentials userCredentials) {
         log.info("Authenticating user '{}'", userCredentials.getLogin());
-
-        Optional<UserEntity> dbUser = userRepository.findByLogin(userCredentials.getLogin());
-        if (dbUser.isPresent()) {
-            if (passwordEncoder.matches(
-                    CharBuffer.wrap(userCredentials.getPassword()), dbUser.get().getPasswordHash())) {
-                return new JwtResponse(authProvider.createToken(UserConverter.toDto(dbUser.get())));
-            }
-        }
-        throw new ServiceException(
-                HttpStatus.UNAUTHORIZED.value(),
-                "User not found or password is invalid");
+        return userRepository
+                .findByLogin(userCredentials.getLogin())
+                .map(user -> {
+                    if (passwordEncoder.matches(
+                            CharBuffer.wrap(userCredentials.getPassword()), user.getPasswordHash())) {
+                        return new JwtResponse(authProvider.createToken(UserConverter.toDto(user)));
+                    }
+                    return null;
+                })
+                .orElseThrow(() -> new ServiceException(HttpStatus.UNAUTHORIZED.value(), "User not found or password is invalid"));
     }
 
 
@@ -81,7 +79,7 @@ public class UserService {
 
     public boolean isUserExistsByLogin(String login) {
         log.info("Checking if user with login '{}' exists", login);
-        return userRepository.findByLogin(login).isPresent();
+        return userRepository.existsByLogin(login);
     }
 
 

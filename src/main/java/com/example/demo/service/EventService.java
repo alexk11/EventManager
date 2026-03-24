@@ -167,10 +167,9 @@ public class EventService {
                 .findById(eventId)
                 .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Event not found"));
 
-        Optional<UserEntity> userEntity = userRepository.findByLogin(getLoginFromJwtToken());
-        if (userEntity.isEmpty()) {
-            throw new ServiceException(HttpStatus.NOT_FOUND.value(), "User not found");
-        }
+        UserEntity userEntity = userRepository
+                .findByLogin(getLoginFromJwtToken())
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "User not found"));
 
         if (event.getDate().isBefore(LocalDateTime.now())) {
             throw new ServiceException(HttpStatus.BAD_REQUEST.value(), "Event has already started or ended");
@@ -181,7 +180,7 @@ public class EventService {
         }
 
         for (RegistrationEntity re : event.getRegistrations()) {
-            if (re.getUserId().equals(userEntity.get().getId())) {
+            if (re.getUserId().equals(userEntity.getId())) {
                 throw new ServiceException(HttpStatus.BAD_REQUEST.value(), "User already registered");
             }
         }
@@ -191,7 +190,7 @@ public class EventService {
         }
 
         RegistrationEntity registrationEntity = RegistrationEntity.builder()
-                .userId(userEntity.get().getId())
+                .userId(userEntity.getId())
                 .registrationDate(LocalDateTime.now())
                 .event(event)
                 .build();
@@ -217,13 +216,12 @@ public class EventService {
             throw new ServiceException(HttpStatus.BAD_REQUEST.value(), "Event has already started or ended");
         }
 
-        Optional<UserEntity> dbUser = userRepository.findByLogin(getLoginFromJwtToken());
-        if (dbUser.isEmpty()) {
-            throw new ServiceException(HttpStatus.NOT_FOUND.value(), "User not found");
-        }
+        UserEntity dbUser = userRepository
+                .findByLogin(getLoginFromJwtToken())
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "User not found"));
 
         registrationRepository
-                .findByUserIdAndEventId(dbUser.get().getId(), eventId)
+                .findByUserIdAndEventId(dbUser.getId(), eventId)
                 .map(r -> {
                     registrationRepository.delete(r);
                     return r;
@@ -240,12 +238,11 @@ public class EventService {
      */
     public List<RegistrationDto> searchRegistrations() {
         log.info("Obtaining user's registrations");
-        Optional<UserEntity> dbUser = userRepository.findByLogin(getLoginFromJwtToken());
-        if (dbUser.isEmpty()) {
-            throw new ServiceException(HttpStatus.NOT_FOUND.value(), "User not found");
-        }
+        UserEntity dbUser = userRepository
+                .findByLogin(getLoginFromJwtToken())
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "User not found"));
         return registrationRepository
-                .findByUserId(dbUser.get().getId()).stream()
+                .findByUserId(dbUser.getId()).stream()
                 .map(RegistrationConverter::toDto)
                 .toList();
     }
