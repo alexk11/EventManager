@@ -2,25 +2,32 @@ package com.example.demo.service;
 
 import com.example.demo.converter.EventConverter;
 import com.example.demo.converter.RegistrationConverter;
-import com.example.demo.entity.Event;
-import com.example.demo.entity.Registration;
+import com.example.demo.entity.EventEntity;
+import com.example.demo.entity.RegistrationEntity;
+import com.example.demo.entity.UserEntity;
 import com.example.demo.exception.ServiceException;
-import com.example.demo.model.dto.EventCreateRequestDto;
-import com.example.demo.model.dto.EventDto;
-import com.example.demo.model.dto.EventSearchRequestDto;
-import com.example.demo.model.dto.EventUpdateRequestDto;
+import com.example.demo.model.EventStatus;
+import com.example.demo.model.dto.UserDto;
+import com.example.demo.model.dto.event.EventCreateRequestDto;
+import com.example.demo.model.dto.event.EventDto;
+import com.example.demo.model.dto.event.EventSearchRequestDto;
+import com.example.demo.model.dto.event.EventUpdateRequestDto;
 import com.example.demo.model.dto.RegistrationDto;
 import com.example.demo.repository.EventRepository;
+import com.example.demo.repository.LocationRepository;
 import com.example.demo.repository.RegistrationRepository;
+import com.example.demo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 
 @Slf4j
@@ -29,6 +36,8 @@ import java.util.List;
 public class EventService {
 
     private final EventRepository eventRepository;
+    private final UserRepository userRepository;
+    private final LocationRepository locationRepository;
     private final RegistrationRepository registrationRepository;
 
     /**
@@ -38,8 +47,11 @@ public class EventService {
      */
     public EventDto createEvent(EventCreateRequestDto createDto) {
         log.info("Creating event '{}'", createDto.getName());
-        Event saved = eventRepository.save(EventConverter.toEntity(createDto));
-        return EventConverter.toDto(saved);
+        return userRepository.findByLogin(getLoginFromJwtToken()).map(user -> {
+            EventEntity toCreate = EventConverter.toEntity(createDto);
+            toCreate.setOwnerId(user.getId());
+            return EventConverter.toDto(eventRepository.save(toCreate));
+        }).orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "User not found"));
     }
 
     /**
@@ -76,7 +88,7 @@ public class EventService {
      */
     public EventDto updateEvent(long eventId, EventUpdateRequestDto updateDto) {
         log.info("Updating event with id = '{}'", eventId);
-        Event event = eventRepository
+        EventEntity event = eventRepository
                 .findById(eventId)
                 .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Event not found"));
 
@@ -86,14 +98,22 @@ public class EventService {
                     "The number of available seats must not be less than the number of registrations");
         }
 
-        Event toUpdate = Event.builder()
+        if (!locationRepository.existsById((long) updateDto.getLocationId())) {
+            throw new ServiceException(HttpStatus.NOT_FOUND.value(), "Location not found");
+        }
+
+        EventEntity toUpdate = EventEntity.builder()
                 .id(eventId)
                 .name(updateDto.getName())
+                .ownerId(event.getOwnerId())
                 .cost(updateDto.getCost())
                 .date(updateDto.getDate())
                 .duration(updateDto.getDuration())
                 .locationId(updateDto.getLocationId())
+                .occupiedPlaces(event.getOccupiedPlaces())
                 .maxPlaces(updateDto.getMaxPlaces())
+                .status(event.getStatus())
+                .registrations(event.getRegistrations())
                 .build();
         return EventConverter.toDto(eventRepository.save(toUpdate));
     }
@@ -105,8 +125,7 @@ public class EventService {
      */
     public List<EventDto> searchEvents(EventSearchRequestDto searchDto) {
         log.info("Searching for events according to filter criteria");
-        List<EventDto> result = new ArrayList<>();
-        eventRepository.findEventsByFilterParams(
+        return eventRepository.findEventsByFilterParams(
                 searchDto.getDateStartAfter(),
                 searchDto.getDateStartBefore(),
                 searchDto.getDurationMin(),
@@ -117,38 +136,50 @@ public class EventService {
                 searchDto.getEventStatus().name(),
                 searchDto.getName(),
                 searchDto.getCostMin(),
-                searchDto.getCostMax()).forEach(
-                        item -> result.add(EventConverter.toDto(item)));
-        return result;
+                searchDto.getCostMax())
+                    .stream().map(EventConverter::toDto).toList();
     }
 
     /**
-     * Find events by owner id
-     * @param ownerId
+     * Find events of current user
      * @return
      */
-    public List<EventDto> searchUserEvents(long ownerId) {
-        log.info("Searching for user '{}' events", ownerId);
-        List<EventDto> result = new ArrayList<>();
-        eventRepository.findByOwnerId(ownerId).forEach(
-                item -> result.add(EventConverter.toDto(item)));
-        return result;
+    public List<EventDto> searchUserEvents() {
+        log.info("Searching user's events");
+        UserEntity userEntity = userRepository
+                .findByLogin(getLoginFromJwtToken())
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "User not found"));
+        return eventRepository
+                .findByOwnerId(userEntity.getId()).stream()
+                .map(EventConverter::toDto)
+                .toList();
     }
 
     /**
      * Create new event registration
      * @param eventId
-     * @param userId
      */
     @Transactional
-    public void registerForEvent(long eventId, long userId) {
-        log.info("Registering user '{}' for event '{}'", userId, eventId);
-        Event event = eventRepository
+    public void registerForEvent(long eventId) {
+        log.info("Registering user for event '{}'", eventId);
+        EventEntity event = eventRepository
                 .findById(eventId)
                 .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Event not found"));
 
-        for (Registration re : event.getRegistrations()) {
-            if (re.getUserId().equals(userId)) {
+        UserEntity userEntity = userRepository
+                .findByLogin(getLoginFromJwtToken())
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "User not found"));
+
+        if (event.getDate().isBefore(LocalDateTime.now())) {
+            throw new ServiceException(HttpStatus.BAD_REQUEST.value(), "Event has already started or ended");
+        }
+
+        if (event.getStatus().equals(EventStatus.CANCELLED.name())) {
+            throw new ServiceException(HttpStatus.BAD_REQUEST.value(), "Event has been canceled");
+        }
+
+        for (RegistrationEntity re : event.getRegistrations()) {
+            if (re.getUserId().equals(userEntity.getId())) {
                 throw new ServiceException(HttpStatus.BAD_REQUEST.value(), "User already registered");
             }
         }
@@ -157,8 +188,8 @@ public class EventService {
             throw new ServiceException(HttpStatus.BAD_REQUEST.value(), "There is no seat available");
         }
 
-        Registration registrationEntity = Registration.builder()
-                .userId(userId)
+        RegistrationEntity registrationEntity = RegistrationEntity.builder()
+                .userId(userEntity.getId())
                 .registrationDate(LocalDateTime.now())
                 .event(event)
                 .build();
@@ -171,13 +202,12 @@ public class EventService {
     /**
      * Cancel user registration for the event
      * @param eventId name of the event
-     * @param userId the user id
      */
     @Transactional
-    public void cancelRegistration(long eventId, long userId) {
-        log.info("Cancelling registration of user '{}' for event '{}'", userId, eventId);
+    public void cancelRegistration(long eventId) {
+        log.info("Cancelling registration for event '{}'", eventId);
 
-        Event event = eventRepository
+        EventEntity event = eventRepository
                 .findById(eventId)
                 .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Event not found"));
 
@@ -185,34 +215,39 @@ public class EventService {
             throw new ServiceException(HttpStatus.BAD_REQUEST.value(), "Event has already started or ended");
         }
 
+        UserEntity dbUser = userRepository
+                .findByLogin(getLoginFromJwtToken())
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "User not found"));
+
         registrationRepository
-                .findByUserIdAndEventId(userId, eventId)
+                .findByUserIdAndEventId(dbUser.getId(), eventId)
                 .map(r -> {
                     registrationRepository.delete(r);
                     return r;
                 })
-                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Registration not found"));
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "User's registration not found"));
 
         event.setOccupiedPlaces(event.getOccupiedPlaces() - 1);
         eventRepository.save(event);
     }
 
     /**
-     * Find registrations with respect to filter criteria
-     * @param userId
+     * Find registrations of current user
      * @return
      */
-    public List<RegistrationDto> searchRegistrations(long userId) {
-        log.info("Obtain registrations of user '{}'", userId);
-        List<RegistrationDto> result = new ArrayList<>();
-        registrationRepository
-                .findByUserId(userId).forEach(
-                r -> result.add(RegistrationConverter.toDto(r)));
-        return result;
+    public List<RegistrationDto> searchRegistrations() {
+        log.info("Obtaining user's registrations");
+        UserEntity dbUser = userRepository
+                .findByLogin(getLoginFromJwtToken())
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "User not found"));
+        return registrationRepository
+                .findByUserId(dbUser.getId()).stream()
+                .map(RegistrationConverter::toDto)
+                .toList();
     }
 
     /**
-     * Get all registrations
+     * Get all registrations of all users
      * @return
      */
     public List<RegistrationDto> getRegistrations() {
@@ -220,6 +255,14 @@ public class EventService {
         return registrationRepository.findAll().stream()
                 .map(RegistrationConverter::toDto)
                 .toList();
+    }
+
+    private String getLoginFromJwtToken() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof UserDto userDto) {
+            return userDto.getLogin();
+        }
+        return null;
     }
 
 }

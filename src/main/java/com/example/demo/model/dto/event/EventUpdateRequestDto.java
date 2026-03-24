@@ -1,4 +1,4 @@
-package com.example.demo.model.dto;
+package com.example.demo.model.dto.event;
 
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Min;

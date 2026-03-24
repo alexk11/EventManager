@@ -1,7 +1,7 @@
 package com.example.demo.service;
 
 import com.example.demo.converter.LocationConverter;
-import com.example.demo.entity.Location;
+import com.example.demo.entity.LocationEntity;
 import com.example.demo.exception.ServiceException;
 import com.example.demo.model.dto.LocationDto;
 import com.example.demo.repository.LocationRepository;
@@ -38,7 +38,7 @@ public class LocationService {
      */
     public LocationDto createLocation(LocationDto locationDto) {
         log.info("Creating new location with the name '{}'", locationDto.getName());
-        Location locationEntity =
+        LocationEntity locationEntity =
                 locationRepository.save(LocationConverter.toEntity(locationDto));
         return LocationConverter.toDto(locationEntity);
     }
@@ -82,7 +82,7 @@ public class LocationService {
     public LocationDto updateLocation(long locationId, LocationDto updateDto) {
         log.info("Updating location '{}'", locationId);
 
-        Location location = locationRepository
+        LocationEntity location = locationRepository
                 .findById(locationId)
                 .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Location not found"));
 
@@ -92,7 +92,7 @@ public class LocationService {
                     "Location capacity cannot be decreased");
         }
 
-        Location toUpdate = Location.builder()
+        LocationEntity toUpdate = LocationEntity.builder()
             .id(locationId)
             .name(updateDto.getName())
             .address(updateDto.getAddress())

@@ -1,18 +1,19 @@
 package com.example.demo.converter;
 
-import com.example.demo.entity.Registration;
+import com.example.demo.entity.RegistrationEntity;
 import com.example.demo.model.dto.RegistrationDto;
+
 
 public class RegistrationConverter {
 
-    public static Registration toEntity(RegistrationDto dto) {
-        return Registration.builder()
+    public static RegistrationEntity toEntity(RegistrationDto dto) {
+        return RegistrationEntity.builder()
                 .userId(dto.getUserId())
                 .registrationDate(dto.getRegistrationDate())
                 .build();
     }
 
-    public static RegistrationDto toDto(Registration entity) {
+    public static RegistrationDto toDto(RegistrationEntity entity) {
         return RegistrationDto.builder()
                 .id(entity.getId())
                 .eventId(entity.getEvent().getId())
