@@ -146,12 +146,11 @@ public class EventService {
      */
     public List<EventDto> searchUserEvents() {
         log.info("Searching user's events");
-        Optional<UserEntity> userEntity = userRepository.findByLogin(getLoginFromJwtToken());
-        if (userEntity.isEmpty()) {
-            throw new ServiceException(HttpStatus.NOT_FOUND.value(), "User not found");
-        }
+        UserEntity userEntity = userRepository
+                .findByLogin(getLoginFromJwtToken())
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "User not found"));
         return eventRepository
-                .findByOwnerId(userEntity.get().getId()).stream()
+                .findByOwnerId(userEntity.getId()).stream()
                 .map(EventConverter::toDto)
                 .toList();
     }
