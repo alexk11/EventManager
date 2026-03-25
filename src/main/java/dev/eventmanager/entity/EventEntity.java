@@ -1,9 +1,12 @@
 package dev.eventmanager.entity;
 
+import dev.eventmanager.model.EventStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -58,8 +61,8 @@ public class EventEntity {
     @Column(nullable = false)
     private Integer locationId;
 
-    @Column
-    private String status;
+    @Column(nullable = false)
+    private EventStatus status;
 
     @JsonIgnore
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)

@@ -37,7 +37,7 @@ public class UserService {
                 .login(dto.getLogin())
                 .passwordHash(passwordEncoder.encode(dto.getPassword()))
                 .age(dto.getAge())
-                .role(Role.USER.name())
+                .role(Role.USER)
                 .build();
         UserEntity userEntity = userRepository.save(userToSave);
         return UserConverter.toDto(userEntity);

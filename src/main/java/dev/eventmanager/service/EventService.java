@@ -2,6 +2,7 @@ package dev.eventmanager.service;
 
 import dev.eventmanager.converter.EventConverter;
 import dev.eventmanager.converter.RegistrationConverter;
+import dev.eventmanager.converter.UserConverter;
 import dev.eventmanager.entity.EventEntity;
 import dev.eventmanager.entity.RegistrationEntity;
 import dev.eventmanager.entity.UserEntity;
@@ -19,12 +20,16 @@ import dev.eventmanager.repository.RegistrationRepository;
 import dev.eventmanager.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.repository.query.Param;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.access.AccessDeniedException;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -36,6 +41,7 @@ public class EventService {
 
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
+    private final EventPermissionService permissionService;
     private final LocationRepository locationRepository;
     private final RegistrationRepository registrationRepository;
 
@@ -46,15 +52,18 @@ public class EventService {
      */
     public EventDto createEvent(EventCreateRequestDto createDto) {
         log.info("Creating event '{}'", createDto.getName());
-        return userRepository.findByLogin(getLoginFromJwtToken()).map(user -> {
-            EventEntity toCreate = EventConverter.toEntity(createDto);
-            toCreate.setOwnerId(user.getId());
-            return EventConverter.toDto(eventRepository.save(toCreate));
-        }).orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "User not found"));
+
+        UserEntity dbUser = userRepository.findByLogin(getLoginFromJwtToken())
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "User not found"));
+
+        EventEntity toCreate = EventConverter.toEntity(createDto);
+        toCreate.setOwnerId(dbUser.getId());
+
+        return EventConverter.toDto(eventRepository.save(toCreate));
     }
 
     /**
-     * Delete existing event and the registrations
+     * Delete the existing event and its registrations
      * @param eventId
      */
     public void deleteEvent(long eventId) {
@@ -87,9 +96,19 @@ public class EventService {
      */
     public EventDto updateEvent(long eventId, EventUpdateRequestDto updateDto) {
         log.info("Updating event with id = '{}'", eventId);
+
         EventEntity event = eventRepository
                 .findById(eventId)
                 .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Event not found"));
+
+        UserDto currentUser = userRepository
+                .findByLogin(getLoginFromJwtToken())
+                .map(UserConverter::toDto)
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Current user not found"));
+
+        if (!permissionService.canModify(currentUser, event.getOwnerId())) {
+            throw new AccessDeniedException("Only the owner or admin is allowed to update an event");
+        }
 
         if (updateDto.getMaxPlaces() < event.getOccupiedPlaces()) {
             throw new ServiceException(
@@ -125,19 +144,20 @@ public class EventService {
     public List<EventDto> searchEvents(EventSearchRequestDto searchDto) {
         log.info("Searching for events according to filter criteria");
         return eventRepository.findEventsByFilterParams(
-                searchDto.getDateStartAfter(),
-                searchDto.getDateStartBefore(),
-                searchDto.getDurationMin(),
-                searchDto.getDurationMax(),
-                searchDto.getPlacesMin(),
-                searchDto.getPlacesMax(),
-                searchDto.getLocationId(),
-                searchDto.getEventStatus().name(),
-                searchDto.getName(),
-                searchDto.getCostMin(),
-                searchDto.getCostMax())
-                    .stream().map(EventConverter::toDto).toList();
+                        searchDto.getName(),
+                        searchDto.getPlacesMin(),
+                        searchDto.getPlacesMax(),
+                        searchDto.getDateStartAfter(),
+                        searchDto.getDateStartBefore(),
+                        searchDto.getCostMin(),
+                        searchDto.getCostMax(),
+                        searchDto.getDurationMin(),
+                        searchDto.getDurationMax(),
+                        searchDto.getLocationId(),
+                        EventStatus.valueOf(searchDto.getEventStatus())
+                ).stream().map(EventConverter::toDto).toList();
     }
+
 
     /**
      * Find events of current user
@@ -173,7 +193,7 @@ public class EventService {
             throw new ServiceException(HttpStatus.BAD_REQUEST.value(), "Event has already started or ended");
         }
 
-        if (event.getStatus().equals(EventStatus.CANCELLED.name())) {
+        if (event.getStatus().equals(EventStatus.CANCELLED)) {
             throw new ServiceException(HttpStatus.BAD_REQUEST.value(), "Event has been canceled");
         }
 
@@ -209,6 +229,15 @@ public class EventService {
         EventEntity event = eventRepository
                 .findById(eventId)
                 .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Event not found"));
+
+        UserDto currentUser = userRepository
+                .findByLogin(getLoginFromJwtToken())
+                .map(UserConverter::toDto)
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Current user not found"));
+
+        if (!permissionService.canModify(currentUser, event.getOwnerId())) {
+            throw new AccessDeniedException("Only the owner or admin is allowed to cancel a registration");
+        }
 
         if (event.getDate().isBefore(LocalDateTime.now())) {
             throw new ServiceException(HttpStatus.BAD_REQUEST.value(), "Event has already started or ended");
@@ -256,6 +285,10 @@ public class EventService {
                 .toList();
     }
 
+    /**
+     * Extract login name from the security context and jwt token
+     * @return
+     */
     private String getLoginFromJwtToken() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof UserDto userDto) {

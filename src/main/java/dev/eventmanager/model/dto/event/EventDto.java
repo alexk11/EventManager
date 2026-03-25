@@ -1,6 +1,5 @@
 package dev.eventmanager.model.dto.event;
 
-import dev.eventmanager.model.EventStatus;
 import dev.eventmanager.model.dto.RegistrationDto;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Min;
@@ -53,7 +52,7 @@ public class EventDto {
     @NotBlank(message = "Location cannot be empty")
     private int locationId;
 
-    private EventStatus status;
+    private String status;
 
     private List<RegistrationDto> registrations;
 }
