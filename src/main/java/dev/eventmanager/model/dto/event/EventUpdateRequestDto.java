@@ -35,5 +35,5 @@ public class EventUpdateRequestDto {
     private int duration;
 
     @Min(value = 1, message = "Location id must be greater than zero")
-    private int locationId;
+    private long locationId;
 }

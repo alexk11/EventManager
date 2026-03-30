@@ -10,7 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 
 
 @Slf4j
-@EnableScheduling
 @Component
 @RequiredArgsConstructor
 public class EventStatusScheduler {

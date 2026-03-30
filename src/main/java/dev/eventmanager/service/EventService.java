@@ -4,6 +4,7 @@ import dev.eventmanager.converter.EventConverter;
 import dev.eventmanager.converter.RegistrationConverter;
 import dev.eventmanager.converter.UserConverter;
 import dev.eventmanager.entity.EventEntity;
+import dev.eventmanager.entity.LocationEntity;
 import dev.eventmanager.entity.RegistrationEntity;
 import dev.eventmanager.entity.UserEntity;
 import dev.eventmanager.exception.ServiceException;
@@ -20,16 +21,13 @@ import dev.eventmanager.repository.RegistrationRepository;
 import dev.eventmanager.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.repository.query.Param;
 import org.springframework.http.HttpStatus;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.access.AccessDeniedException;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -53,6 +51,13 @@ public class EventService {
     public EventDto createEvent(EventCreateRequestDto createDto) {
         log.info("Creating event '{}'", createDto.getName());
 
+        LocationEntity dbLocation = locationRepository.findById(createDto.getLocationId())
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Location not found"));
+
+        if (createDto.getMaxPlaces() > dbLocation.getCapacity()) {
+            throw new ServiceException(HttpStatus.BAD_REQUEST.value(), "Selected location has insufficient capacity");
+        }
+
         UserEntity dbUser = userRepository.findByLogin(getLoginFromJwtToken())
                 .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "User not found"));
 
@@ -68,9 +73,18 @@ public class EventService {
      */
     public void deleteEvent(long eventId) {
         log.info("Deleting event with id = '{}'", eventId);
+
+        UserDto currentUser = userRepository
+                .findByLogin(getLoginFromJwtToken())
+                .map(UserConverter::toDto)
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Current user not found"));
+
         eventRepository.findById(eventId)
-            .map(item -> {
-                eventRepository.delete(item);
+            .map(event -> {
+                if (!permissionService.canModify(currentUser, event.getOwnerId())) {
+                    throw new AccessDeniedException("Only the owner or admin is allowed to update an event");
+                }
+                eventRepository.delete(event);
                 return eventId;
             })
             .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Event not found"));
@@ -100,6 +114,13 @@ public class EventService {
         EventEntity event = eventRepository
                 .findById(eventId)
                 .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Event not found"));
+
+        LocationEntity dbLocation = locationRepository.findById(updateDto.getLocationId())
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Location not found"));
+
+        if (updateDto.getMaxPlaces() > dbLocation.getCapacity()) {
+            throw new ServiceException(HttpStatus.BAD_REQUEST.value(), "Selected location has insufficient capacity");
+        }
 
         UserDto currentUser = userRepository
                 .findByLogin(getLoginFromJwtToken())
@@ -220,7 +241,7 @@ public class EventService {
 
     /**
      * Cancel user registration for the event
-     * @param eventId name of the event
+     * @param eventId the id of event
      */
     @Transactional
     public void cancelRegistration(long eventId) {
@@ -229,15 +250,6 @@ public class EventService {
         EventEntity event = eventRepository
                 .findById(eventId)
                 .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Event not found"));
-
-        UserDto currentUser = userRepository
-                .findByLogin(getLoginFromJwtToken())
-                .map(UserConverter::toDto)
-                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Current user not found"));
-
-        if (!permissionService.canModify(currentUser, event.getOwnerId())) {
-            throw new AccessDeniedException("Only the owner or admin is allowed to cancel a registration");
-        }
 
         if (event.getDate().isBefore(LocalDateTime.now())) {
             throw new ServiceException(HttpStatus.BAD_REQUEST.value(), "Event has already started or ended");
