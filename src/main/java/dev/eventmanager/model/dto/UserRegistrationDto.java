@@ -18,7 +18,7 @@ public class UserRegistrationDto {
     private String login;
 
     @NotEmpty(message = "Password cannot be empty")
-    @Size(min = 8)
+    @Size(min = 5, max = 20)
     private String password;
 
     @Positive(message = "Age must be greater than zero")

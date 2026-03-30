@@ -42,7 +42,7 @@ public class CustomAuthenticationProvider {
                 .withIssuedAt(now)
                 .withExpiresAt(validity)
                 .withClaim("login", user.getLogin())
-                .withClaim("role", user.getRole().name())
+                .withClaim("role", user.getRole())
                 .sign(algorithm);
     }
 
@@ -57,13 +57,13 @@ public class CustomAuthenticationProvider {
 
         UserDto userDto = UserDto.builder()
                 .login(decoded.getClaim("login").asString())
-                .role(Role.valueOf(decoded.getClaim("role").asString()))
+                .role(decoded.getClaim("role").asString())
                 .build();
 
         return new UsernamePasswordAuthenticationToken(
                 userDto,
                 null,
-                List.of(new SimpleGrantedAuthority(userDto.getRole().name())));
+                List.of(new SimpleGrantedAuthority(userDto.getRole())));
     }
 
 }

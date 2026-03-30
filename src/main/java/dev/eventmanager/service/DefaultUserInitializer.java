@@ -33,7 +33,7 @@ public class DefaultUserInitializer {
                 login,
                 passwordEncoder.encode(password),
                 30,
-                role);
+                role.name());
         userService.saveUser(user);
     }
 

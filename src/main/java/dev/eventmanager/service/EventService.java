@@ -2,7 +2,9 @@ package dev.eventmanager.service;
 
 import dev.eventmanager.converter.EventConverter;
 import dev.eventmanager.converter.RegistrationConverter;
+import dev.eventmanager.converter.UserConverter;
 import dev.eventmanager.entity.EventEntity;
+import dev.eventmanager.entity.LocationEntity;
 import dev.eventmanager.entity.RegistrationEntity;
 import dev.eventmanager.entity.UserEntity;
 import dev.eventmanager.exception.ServiceException;
@@ -24,6 +26,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -36,6 +39,7 @@ public class EventService {
 
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
+    private final EventPermissionService permissionService;
     private final LocationRepository locationRepository;
     private final RegistrationRepository registrationRepository;
 
@@ -46,22 +50,41 @@ public class EventService {
      */
     public EventDto createEvent(EventCreateRequestDto createDto) {
         log.info("Creating event '{}'", createDto.getName());
-        return userRepository.findByLogin(getLoginFromJwtToken()).map(user -> {
-            EventEntity toCreate = EventConverter.toEntity(createDto);
-            toCreate.setOwnerId(user.getId());
-            return EventConverter.toDto(eventRepository.save(toCreate));
-        }).orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "User not found"));
+
+        LocationEntity dbLocation = locationRepository.findById(createDto.getLocationId())
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Location not found"));
+
+        if (createDto.getMaxPlaces() > dbLocation.getCapacity()) {
+            throw new ServiceException(HttpStatus.BAD_REQUEST.value(), "Selected location has insufficient capacity");
+        }
+
+        UserEntity dbUser = userRepository.findByLogin(getLoginFromJwtToken())
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "User not found"));
+
+        EventEntity toCreate = EventConverter.toEntity(createDto);
+        toCreate.setOwnerId(dbUser.getId());
+
+        return EventConverter.toDto(eventRepository.save(toCreate));
     }
 
     /**
-     * Delete existing event and the registrations
+     * Delete the existing event and its registrations
      * @param eventId
      */
     public void deleteEvent(long eventId) {
         log.info("Deleting event with id = '{}'", eventId);
+
+        UserDto currentUser = userRepository
+                .findByLogin(getLoginFromJwtToken())
+                .map(UserConverter::toDto)
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Current user not found"));
+
         eventRepository.findById(eventId)
-            .map(item -> {
-                eventRepository.delete(item);
+            .map(event -> {
+                if (!permissionService.canModify(currentUser, event.getOwnerId())) {
+                    throw new AccessDeniedException("Only the owner or admin is allowed to update an event");
+                }
+                eventRepository.delete(event);
                 return eventId;
             })
             .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Event not found"));
@@ -87,9 +110,26 @@ public class EventService {
      */
     public EventDto updateEvent(long eventId, EventUpdateRequestDto updateDto) {
         log.info("Updating event with id = '{}'", eventId);
+
         EventEntity event = eventRepository
                 .findById(eventId)
                 .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Event not found"));
+
+        LocationEntity dbLocation = locationRepository.findById(updateDto.getLocationId())
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Location not found"));
+
+        if (updateDto.getMaxPlaces() > dbLocation.getCapacity()) {
+            throw new ServiceException(HttpStatus.BAD_REQUEST.value(), "Selected location has insufficient capacity");
+        }
+
+        UserDto currentUser = userRepository
+                .findByLogin(getLoginFromJwtToken())
+                .map(UserConverter::toDto)
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Current user not found"));
+
+        if (!permissionService.canModify(currentUser, event.getOwnerId())) {
+            throw new AccessDeniedException("Only the owner or admin is allowed to update an event");
+        }
 
         if (updateDto.getMaxPlaces() < event.getOccupiedPlaces()) {
             throw new ServiceException(
@@ -125,19 +165,20 @@ public class EventService {
     public List<EventDto> searchEvents(EventSearchRequestDto searchDto) {
         log.info("Searching for events according to filter criteria");
         return eventRepository.findEventsByFilterParams(
-                searchDto.getDateStartAfter(),
-                searchDto.getDateStartBefore(),
-                searchDto.getDurationMin(),
-                searchDto.getDurationMax(),
-                searchDto.getPlacesMin(),
-                searchDto.getPlacesMax(),
-                searchDto.getLocationId(),
-                searchDto.getEventStatus().name(),
-                searchDto.getName(),
-                searchDto.getCostMin(),
-                searchDto.getCostMax())
-                    .stream().map(EventConverter::toDto).toList();
+                        searchDto.getName(),
+                        searchDto.getPlacesMin(),
+                        searchDto.getPlacesMax(),
+                        searchDto.getDateStartAfter(),
+                        searchDto.getDateStartBefore(),
+                        searchDto.getCostMin(),
+                        searchDto.getCostMax(),
+                        searchDto.getDurationMin(),
+                        searchDto.getDurationMax(),
+                        searchDto.getLocationId(),
+                        EventStatus.valueOf(searchDto.getEventStatus())
+                ).stream().map(EventConverter::toDto).toList();
     }
+
 
     /**
      * Find events of current user
@@ -173,7 +214,7 @@ public class EventService {
             throw new ServiceException(HttpStatus.BAD_REQUEST.value(), "Event has already started or ended");
         }
 
-        if (event.getStatus().equals(EventStatus.CANCELLED.name())) {
+        if (event.getStatus().equals(EventStatus.CANCELLED)) {
             throw new ServiceException(HttpStatus.BAD_REQUEST.value(), "Event has been canceled");
         }
 
@@ -200,7 +241,7 @@ public class EventService {
 
     /**
      * Cancel user registration for the event
-     * @param eventId name of the event
+     * @param eventId the id of event
      */
     @Transactional
     public void cancelRegistration(long eventId) {
@@ -256,6 +297,10 @@ public class EventService {
                 .toList();
     }
 
+    /**
+     * Extract login name from the security context and jwt token
+     * @return
+     */
     private String getLoginFromJwtToken() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof UserDto userDto) {

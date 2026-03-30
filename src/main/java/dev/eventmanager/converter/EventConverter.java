@@ -2,12 +2,10 @@ package dev.eventmanager.converter;
 
 import dev.eventmanager.entity.EventEntity;
 import dev.eventmanager.entity.RegistrationEntity;
-import dev.eventmanager.exception.ServiceException;
 import dev.eventmanager.model.EventStatus;
 import dev.eventmanager.model.dto.event.EventCreateRequestDto;
 import dev.eventmanager.model.dto.event.EventDto;
 import dev.eventmanager.model.dto.RegistrationDto;
-import org.springframework.http.HttpStatus;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +24,7 @@ public class EventConverter {
                 .cost(entity.getCost())
                 .duration(entity.getDuration())
                 .locationId(entity.getLocationId())
-                .status(EventStatus.valueOf(entity.getStatus()))
+                .status(entity.getStatus().name())
                 .registrations(toDtoList(entity.getRegistrations()))
                 .build();
     }
@@ -40,7 +38,7 @@ public class EventConverter {
                 .cost(dto.getCost())
                 .duration(dto.getDuration())
                 .locationId(dto.getLocationId())
-                .status(EventStatus.WAIT_START.name())
+                .status(EventStatus.WAIT_START)
                 .build();
     }
 
@@ -50,15 +48,6 @@ public class EventConverter {
         }
         return registrations.stream()
                 .map(RegistrationConverter::toDto)
-                .toList();
-    }
-
-    private static List<RegistrationEntity> toEntityList(List<RegistrationDto> registrations) {
-        if (registrations == null) {
-            throw new ServiceException(HttpStatus.INTERNAL_SERVER_ERROR.value(), "No registrations found");
-        }
-        return registrations.stream()
-                .map(RegistrationConverter::toEntity)
                 .toList();
     }
 

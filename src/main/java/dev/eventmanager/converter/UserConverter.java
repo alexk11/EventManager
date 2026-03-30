@@ -15,7 +15,7 @@ public class UserConverter {
                 .id(entity.getId())
                 .login(entity.getLogin())
                 .age(entity.getAge())
-                .role(Role.valueOf(entity.getRole()))
+                .role(entity.getRole().name())
                 .build();
     }
 
@@ -24,7 +24,7 @@ public class UserConverter {
                 .login(dto.getLogin())
                 .passwordHash(dto.getPasswordHash())
                 .age(dto.getAge())
-                .role(dto.getRole().name())
+                .role(Role.valueOf(dto.getRole()))
                 .build();
     }
 
@@ -33,7 +33,7 @@ public class UserConverter {
                 .login(dto.getLogin())
                 .passwordHash(dto.getPassword())
                 .age(dto.getAge())
-                .role(Role.USER.name())
+                .role(Role.USER)
                 .build();
     }
 

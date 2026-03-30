@@ -24,17 +24,22 @@ security:
   jwt:
     secret-key: "53A73E5F1C4E0A2D3B5F2D784E6A1B423D6F247D1F6E5C3A596D635A75327855"
 
-#logging:
-#  level:
-#    org:
-#      hibernate:
-#        type:
-#          descriptor:
-#            sql:
-#              BasicBinder: TRACE
+websecurity:
+  debug: false
 
 logging:
   level:
     org:
       hibernate:
-        type: TRACE
+        type:
+          descriptor:
+            sql:
+              BasicBinder: TRACE
+      apache:
+        catalina:
+          core:
+            ApplicationHttpRequest: ERROR
+
+event:
+  status:
+    cron: "0 */3 * * * *"
