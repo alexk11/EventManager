@@ -30,7 +30,7 @@ public class NotificationController {
     }
 
     @PostMapping
-    public ResponseEntity<List<NotificationDto>> markAsRead(
+    public ResponseEntity<List<Long>> markAsRead(
             @RequestHeader("Authorization") String jwtToken,
             @RequestBody List<Long> notificationIds) {
         log.info("POST request to mark user's notifications as read");
