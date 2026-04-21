@@ -1,6 +1,9 @@
 package dev.eventnotificator.service;
 
 import com.auth0.jwt.JWT;
+import com.auth0.jwt.JWTVerifier;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.eventcommon.kafka.ChangeItem;
@@ -13,13 +16,13 @@ import dev.eventnotificator.model.NotificationDto;
 import dev.eventnotificator.model.NotificationEventPayloadDto;
 import dev.eventnotificator.repository.NotificationRepository;
 import dev.eventnotificator.repository.PayloadRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
-
-import static dev.eventcommon.util.TimeUtil.getNow;
 
 
 @Slf4j
@@ -29,6 +32,14 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final PayloadRepository payloadRepository;
+
+    @Value("${security.jwt.secret-key:secret-key}")
+    private String secretKey;
+
+    @PostConstruct
+    protected void init() {
+        secretKey = Base64.getEncoder().encodeToString(secretKey.getBytes());
+    }
 
     @Transactional
     public void saveEvent(EventChangeMessage msg) {
@@ -56,35 +67,28 @@ public class NotificationService {
     }
 
     public List<NotificationDto> getUserNotifications(String token) {
-        String jwt = token.split("\\s")[1];
-        Long userId = JWT.decode(jwt).getClaim("userId").asLong();
+        log.info("Get user's notifications");
+        Long userId = validateAndGetUserId(token);
         return notificationRepository.findByUserId(userId).stream()
                 .map(NotificationConverter::toNotificationDto)
                 .toList();
     }
 
-    public List<NotificationDto> markAsRead(String token, List<Long> notificationIds) {
-        String jwt = token.split("\\s")[1];
-        Long userId = JWT.decode(jwt).getClaim("userId").asLong();
+    public List<Long> markAsRead(String token, List<Long> notificationIds) {
+        log.info("Mark user's notifications as read");
 
-        Set<Long> toUpdate = new HashSet<>(notificationIds);
+        Long userId = validateAndGetUserId(token);
 
-        List<Long> common = notificationRepository.findByUserId(userId).stream()
+        Set<Long> idsSet = new HashSet<>(notificationIds);
+        List<Long> markIds = notificationRepository.findByUserId(userId).stream()
+                .filter(item -> !item.isRead())
                 .map(NotificationEntity::getId)
                 .toList().stream()
-                .filter(toUpdate::contains)
+                .filter(idsSet::contains)
                 .toList();
+        notificationRepository.markAsReadByIdsAndUserId(userId, markIds);
 
-        List<NotificationDto> updated = new ArrayList<>();
-        common.forEach(id ->
-                notificationRepository.findById(id).ifPresent(item -> {
-                    item.setRead(true);
-                    item.setReadAt(getNow());
-                    notificationRepository.save(item);
-                    updated.add(NotificationConverter.toNotificationDto(item));
-                }));
-
-        return updated;
+        return markIds;
     }
 
     private String getEventPayload(EventChangeMessage msg) {
@@ -99,6 +103,17 @@ public class NotificationService {
             log.error("Convert object to string error: {}", ex.getMessage());
         }
         return null;
+    }
+
+    private Long validateAndGetUserId(String token) {
+        Algorithm algorithm = Algorithm.HMAC256(secretKey);
+
+        JWTVerifier verifier = JWT.require(algorithm)
+                .build();
+        String jwt = token.split("\\s")[1];
+        DecodedJWT decoded = verifier.verify(jwt);
+
+        return decoded.getClaim("userId").asLong();
     }
 
 }
