@@ -1,0 +1,41 @@
+server:
+  port: 8084
+
+spring:
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  kafka:
+    bootstrap-servers: localhost:9093
+    topics:
+      events-topic: events
+
+    consumer:
+      group-id: event-notificator
+      key-deserializer: org.apache.kafka.common.serialization.LongDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      auto-offset-reset: earliest
+      enable-auto-commit: true
+      properties:
+        spring.json.use.type.headers: false
+        spring.json.trusted.packages: "*"
+
+  app:
+    notification:
+      days-to-keep: 7
+
+security:
+  jwt:
+    secret-key: "53A73E5F1C4E0A2D3B5F2D784E6A1B423D6F247D1F6E5C3A596D635A75327855"

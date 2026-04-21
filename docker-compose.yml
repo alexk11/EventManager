@@ -1,0 +1,74 @@
+services:
+
+#  event-manager-app:
+#    image: event-manager-app
+#    build:
+#      context: event-manager-app
+#      dockerfile: event-manager-app/Dockerfile
+#    ports:
+#      - "8082:8082"
+#    depends_on:
+#      postgres:
+#        condition: service_healthy
+#    environment:
+#      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-db:5432/postgres
+#      SPRING_DATASOURCE_USERNAME: postgres
+#      SPRING_DATASOURCE_PASSWORD: postgres
+#    restart: unless-stopped
+
+  postgres:
+    image: postgres:16
+    container_name: event-manager-db
+    environment:
+      POSTGRES_USER: postgres # имя пользователя
+      POSTGRES_PASSWORD: postgres # пароль
+      POSTGRES_DB: postgres # имя БД по умолчанию
+      LC_MESSAGES: en_US.UTF-8 # язык ошибок - английский
+    ports:
+      - "5432:5432" # проброс порта PostgreSQL
+    volumes:
+      - /var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka:
+    image: bitnamilegacy/kafka:4.0.0-debian-12-r10
+    container_name: kafka
+    ports:
+      - "9092:9092" # для клиентов из docker-сети (Kafka UI, другие сервисы)
+      - "9093:9093" # для внешних клиентов (ваш хост)
+    environment:
+      - KAFKA_ENABLE_KRAFT=yes
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9094
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      # слушатели
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,EXTERNAL://:9093,CONTROLLER://:9094
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      # рекламируем: внутри докера - kafka:9092, снаружи - localhost:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://localhost:9093
+      #- KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
+      # брокеры общаются через PLAINTEXT (у вас кластер из одного узла)
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+    volumes:
+      - kafka_data:/bitnami/kafka
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8090:8080"
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+    depends_on:
+      - kafka
+
+volumes:
+  kafka_data:

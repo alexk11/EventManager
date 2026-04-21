@@ -1,0 +1,25 @@
+spring:
+
+  kafka:
+    bootstrap-servers: localhost:9093
+    topics:
+      event-manager:
+        events-topic: events
+
+    producer:
+      # Acknowledgment level:
+      # "0": Producer does not wait for any acknowledgment from the broker (highest throughput, lowest durability).
+      # "1": Producer waits for only the leader broker to acknowledge (balance between throughput and durability).
+      # "all" (or "-1"): Producer waits for all in-sync replicas to acknowledge (lowest throughput, highest durability/guarantee of no message loss).
+      acks: 0 # Recommended for high reliability
+      # Other useful properties for reliability:
+      retries: 3 # Number of times to retry a failed send
+      key-serializer: org.apache.kafka.common.serialization.LongSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+#    consumer:
+#      group-id: event-notificator
+#      key-deserializer: org.apache.kafka.common.serialization.LongDeserializer
+#      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+#      properties:
+#        spring.json.trusted.packages: "*"
