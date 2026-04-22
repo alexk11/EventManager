@@ -71,8 +71,8 @@ public interface EventRepository extends JpaRepository<EventEntity, Long> {
             @Param("status") EventStatus status);
 
     @Query(value = """
-            SELECT count(*) > 0 FROM events WHERE location_id = :locationId
-             AND status != 'CANCELLED'
+            SELECT count(*) > 0 FROM Events WHERE location_id = :locationId
+             AND status != 2
              AND date < :end
              AND date + (duration * INTERVAL '1 minute') > :start
             """, nativeQuery = true)
