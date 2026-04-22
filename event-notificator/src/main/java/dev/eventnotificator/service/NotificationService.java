@@ -80,9 +80,7 @@ public class NotificationService {
         Long userId = validateAndGetUserId(token);
 
         Set<Long> idsSet = new HashSet<>(notificationIds);
-        List<Long> markIds = notificationRepository.findByUserId(userId).stream()
-                .filter(item -> !item.isRead())
-                .map(NotificationEntity::getId)
+        List<Long> markIds = notificationRepository.findByUserIdAndIsReadFalse(userId).stream()
                 .toList().stream()
                 .filter(idsSet::contains)
                 .toList();
