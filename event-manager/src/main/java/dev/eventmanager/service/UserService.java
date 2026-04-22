@@ -2,7 +2,7 @@ package dev.eventmanager.service;
 
 import dev.eventmanager.converter.UserConverter;
 import dev.eventmanager.entity.UserEntity;
-import dev.eventmanager.exception.ServiceException;
+import dev.eventcommon.exception.ServiceException;
 import dev.eventmanager.model.JwtResponse;
 import dev.eventmanager.model.Role;
 import dev.eventmanager.model.UserCredentials;

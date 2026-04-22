@@ -6,10 +6,10 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.eventcommon.exception.ServiceException;
 import dev.eventcommon.kafka.ChangeItem;
 import dev.eventcommon.kafka.EventChangeMessage;
 import dev.eventnotificator.converter.NotificationConverter;
-import dev.eventnotificator.entity.NotificationEntity;
 import dev.eventnotificator.entity.NotificationEventPayloadEntity;
 import dev.eventnotificator.model.KafkaEventPayloadJson;
 import dev.eventnotificator.model.NotificationDto;
@@ -20,6 +20,7 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
@@ -44,6 +45,11 @@ public class NotificationService {
     @Transactional
     public void saveEvent(EventChangeMessage msg) {
         log.info("Saving kafka message into db, message = {}", msg);
+
+        // use (eventId, ownerId) as idempotency key and check if the event was already saved
+        if(payloadRepository.existsByEventIdAndOwnerId(msg.eventId(), msg.ownerId())) {
+            throw new ServiceException(HttpStatus.ALREADY_REPORTED.value(), "Event payload already saved");
+        }
 
         NotificationEventPayloadDto payloadDto = NotificationEventPayloadDto.builder()
                 .messageId(msg.messageId())

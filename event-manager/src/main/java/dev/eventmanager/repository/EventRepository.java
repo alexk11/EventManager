@@ -18,18 +18,18 @@ import java.util.List;
 public interface EventRepository extends JpaRepository<EventEntity, Long> {
 
     @Query("""
-            SELECT e FROM EventEntity e WHERE 
-            (:name IS NULL OR e.name LIKE %:name%) AND
-            (:placesMin IS NULL OR e.maxPlaces >= :placesMin) AND  
-            (:placesMax IS NULL OR e.maxPlaces <= :placesMax) AND 
-            (CAST(:dateStartAfter as date) IS NULL OR e.date >= :dateStartAfter) AND 
-            (CAST(:dateStartBefore as date) IS NULL OR e.date <= :dateStartBefore) AND             
-            (:costMin IS NULL OR e.cost >= :costMin) AND  
-            (:costMax IS NULL OR e.cost <= :costMax) AND 
-            (:durationMin IS NULL OR e.duration >= :durationMin) AND 
-            (:durationMax IS NULL OR e.duration <= :durationMax) AND 
-            (:locationId IS NULL OR e.locationId = :locationId) AND 
-            (:status IS NULL OR e.status = :status)
+            SELECT e FROM EventEntity e WHERE
+             (:name IS NULL OR e.name LIKE %:name%) AND
+             (:placesMin IS NULL OR e.maxPlaces >= :placesMin) AND
+             (:placesMax IS NULL OR e.maxPlaces <= :placesMax) AND
+             (CAST(:dateStartAfter as date) IS NULL OR e.date >= :dateStartAfter) AND
+             (CAST(:dateStartBefore as date) IS NULL OR e.date <= :dateStartBefore) AND
+             (:costMin IS NULL OR e.cost >= :costMin) AND
+             (:costMax IS NULL OR e.cost <= :costMax) AND
+             (:durationMin IS NULL OR e.duration >= :durationMin) AND
+             (:durationMax IS NULL OR e.duration <= :durationMax) AND
+             (:locationId IS NULL OR e.locationId = :locationId) AND
+             (:status IS NULL OR e.status = :status)
             """)
     List<EventEntity> findEventsByFilterParams(
             @Param("name") String name,
@@ -45,7 +45,6 @@ public interface EventRepository extends JpaRepository<EventEntity, Long> {
             @Param("status") EventStatus status);
 
     List<EventEntity> findByOwnerId(Long ownerId);
-
 
     @Query(value = "SELECT e.id FROM Events e WHERE" +
                    " e.status = :status" +
@@ -70,4 +69,16 @@ public interface EventRepository extends JpaRepository<EventEntity, Long> {
     void changeStatus(
             @Param("id") Long id,
             @Param("status") EventStatus status);
+
+    @Query(value = """
+            SELECT count(*) > 0 FROM events WHERE location_id = :locationId
+             AND status != 'CANCELLED'
+             AND date < :end
+             AND date + (duration * INTERVAL '1 minute') > :start
+            """, nativeQuery = true)
+    boolean isTimeslotBusy(
+            @Param("locationId") Long locationId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end
+    );
 }

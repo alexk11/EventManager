@@ -1,4 +1,4 @@
-package dev.eventmanager.exception;
+package dev.eventcommon.exception;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

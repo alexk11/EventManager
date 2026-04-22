@@ -2,7 +2,7 @@ package dev.eventmanager.service;
 
 import dev.eventmanager.converter.LocationConverter;
 import dev.eventmanager.entity.LocationEntity;
-import dev.eventmanager.exception.ServiceException;
+import dev.eventcommon.exception.ServiceException;
 import dev.eventmanager.model.dto.LocationDto;
 import dev.eventmanager.repository.LocationRepository;
 import lombok.RequiredArgsConstructor;

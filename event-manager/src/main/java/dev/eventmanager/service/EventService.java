@@ -13,7 +13,7 @@ import dev.eventmanager.entity.EventEntity;
 import dev.eventmanager.entity.LocationEntity;
 import dev.eventmanager.entity.RegistrationEntity;
 import dev.eventmanager.entity.UserEntity;
-import dev.eventmanager.exception.ServiceException;
+import dev.eventcommon.exception.ServiceException;
 import dev.eventmanager.model.EventStatus;
 import dev.eventmanager.model.dto.UserDto;
 import dev.eventmanager.model.dto.event.EventCreateRequestDto;
@@ -65,11 +65,19 @@ public class EventService {
                 .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Location not found"));
 
         if (createDto.getMaxPlaces() > dbLocation.getCapacity()) {
-            throw new ServiceException(HttpStatus.BAD_REQUEST.value(), "Selected location has insufficient capacity");
+            throw new ServiceException(HttpStatus.BAD_REQUEST.value(),
+                    "Selected location has insufficient capacity");
         }
 
         UserEntity dbUser = userRepository.findByLogin(getLoginFromJwtToken())
                 .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "User not found"));
+
+        LocalDateTime start = createDto.getDate();
+        LocalDateTime end = createDto.getDate().plusMinutes(createDto.getDuration());
+        if (eventRepository.isTimeslotBusy(createDto.getLocationId(), start, end)) {
+            throw new ServiceException(HttpStatus.IM_USED.value(),
+                    "Provided timeslot is not available for this location");
+        };
 
         EventEntity toCreate = EventConverter.toEntity(createDto);
         toCreate.setOwnerId(dbUser.getId());

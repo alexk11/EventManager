@@ -21,15 +21,15 @@ public interface NotificationRepository extends JpaRepository<NotificationEntity
 
     @Modifying
     @Transactional
-    @Query(value = "UPDATE Notifications n SET n.isRead = true, n.readAt = NOW() WHERE " +
-            "n.id IN (:ids) AND n.userId = :userId",
+    @Query(value = "UPDATE Notifications SET is_read = true, read_at = NOW() WHERE " +
+            "id IN (:ids) AND user_id = :userId",
             nativeQuery = true)
     void markAsReadByIdsAndUserId(@Param("userId") long userId, @Param("ids") List<Long> ids);
 
     @Modifying
     @Transactional
     @Query(value = "DELETE FROM Notifications n WHERE " +
-            "n.read_at < NOW() - make_interval(days => :days) AND n.isRead = true",
+            "n.read_at < NOW() - make_interval(days => :days) AND n.is_read = true",
             nativeQuery = true)
     void deleteReadNotificationsOlderDays(@Param("days") int days);
 }
