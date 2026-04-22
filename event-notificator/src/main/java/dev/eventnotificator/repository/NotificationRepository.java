@@ -16,7 +16,7 @@ public interface NotificationRepository extends JpaRepository<NotificationEntity
 
     List<NotificationEntity> findByUserId(Long userId);
 
-    @Query(value = "SELECT n.id FROM NotificationEntity n WHERE n.userId = :userId AND isRead = false")
+    @Query(value = "SELECT n.id FROM NotificationEntity n WHERE n.userId = :userId AND n.isRead = false")
     List<Long> findByUserIdAndIsReadFalse(@Param("userId") Long userId);
 
     @Modifying
@@ -29,7 +29,7 @@ public interface NotificationRepository extends JpaRepository<NotificationEntity
     @Modifying
     @Transactional
     @Query(value = "DELETE FROM Notifications n WHERE " +
-            "n.read_at < NOW() - make_interval(days => :days)",
+            "n.read_at < NOW() - make_interval(days => :days) AND n.isRead = true",
             nativeQuery = true)
     void deleteReadNotificationsOlderDays(@Param("days") int days);
 }
