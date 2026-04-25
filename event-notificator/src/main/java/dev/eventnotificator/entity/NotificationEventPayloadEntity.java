@@ -1,10 +1,9 @@
 package dev.eventnotificator.entity;
 
 import jakarta.persistence.*;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.annotations.ColumnTransformer;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -13,6 +12,8 @@ import java.util.UUID;
 @Setter
 @Builder
 @Entity
+@AllArgsConstructor
+@RequiredArgsConstructor
 @Table(name = "notification_event_payloads")
 public class NotificationEventPayloadEntity {
 

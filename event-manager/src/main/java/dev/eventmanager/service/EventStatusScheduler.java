@@ -3,10 +3,10 @@ package dev.eventmanager.service;
 import dev.eventmanager.model.EventStatus;
 import dev.eventmanager.repository.EventRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.scheduling.annotation.Scheduled;
-import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
@@ -16,10 +16,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class EventStatusScheduler {
 
+    private static final String CACHE_KEY_PREFIX = "event:";
     private final RedisCacheManager cacheManager;
     private final EventRepository eventRepository;
-
-    private static final String CACHE_KEY_PREFIX = "event:";
 
     @Scheduled(cron = "${event.status.cron:0 */3 * * * *}")
     public void updateStatuses() {

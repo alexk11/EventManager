@@ -21,7 +21,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.*;
+
+import java.util.Base64;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 
 @Slf4j
@@ -46,7 +50,7 @@ public class NotificationService {
         log.info("Saving kafka message to db, message = {}", msg);
 
         // use (eventId, ownerId) as idempotency key
-        if(payloadRepository.existsByEventIdAndOwnerId(msg.eventId(), msg.ownerId())) {
+        if (payloadRepository.existsByEventIdAndOwnerId(msg.eventId(), msg.ownerId())) {
             log.info("Event payload is already in db: eventId = {}, userId = {}",
                     msg.eventId(), msg.ownerId());
             return;
@@ -112,7 +116,7 @@ public class NotificationService {
                     .changes(msg.changes().toArray(ChangeItem[]::new))
                     .build();
             return new ObjectMapper().writeValueAsString(payload);
-        } catch(JsonProcessingException ex) {
+        } catch (JsonProcessingException ex) {
             log.error("Convert object to string error: {}", ex.getMessage());
         }
         return null;

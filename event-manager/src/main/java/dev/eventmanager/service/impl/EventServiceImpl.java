@@ -1,5 +1,6 @@
 package dev.eventmanager.service.impl;
 
+import dev.eventcommon.exception.ServiceException;
 import dev.eventcommon.kafka.ChangeItem;
 import dev.eventcommon.kafka.EventChangeMessage;
 import dev.eventcommon.kafka.EventType;
@@ -13,7 +14,6 @@ import dev.eventmanager.entity.EventEntity;
 import dev.eventmanager.entity.LocationEntity;
 import dev.eventmanager.entity.RegistrationEntity;
 import dev.eventmanager.entity.UserEntity;
-import dev.eventcommon.exception.ServiceException;
 import dev.eventmanager.model.EventStatus;
 import dev.eventmanager.model.dto.UserDto;
 import dev.eventmanager.model.dto.event.EventCreateRequestDto;
@@ -31,11 +31,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -111,7 +111,7 @@ public class EventServiceImpl implements EventService {
                 getNow(),
                 dbUser.getId(),
                 dbUser.getId(),
-                List.of(44L,45L,46L),
+                List.of(44L, 45L, 46L),
                 createNewEventChanges(createDto)
         ));
 
@@ -155,7 +155,7 @@ public class EventServiceImpl implements EventService {
                 getNow(),
                 currentUser.getId(),
                 currentUser.getId(),
-                List.of(44L,45L,46L),
+                List.of(44L, 45L, 46L),
                 null
         ));
     }
@@ -178,10 +178,10 @@ public class EventServiceImpl implements EventService {
 
         log.info("Fallback to db event, id = {}", eventId);
         EventDto fromDb = eventRepository.findById(eventId)
-        .map(EventConverter::toDto)
-        .orElseThrow(() ->
-                new ServiceException(HttpStatus.NOT_FOUND.value(),
-                        "Event with id = '" + eventId + "' not found in db"));
+                .map(EventConverter::toDto)
+                .orElseThrow(() ->
+                        new ServiceException(HttpStatus.NOT_FOUND.value(),
+                                "Event with id = '" + eventId + "' not found in db"));
 
         addToCache(eventId, fromDb);
 
@@ -261,7 +261,7 @@ public class EventServiceImpl implements EventService {
                 getNow(),
                 currentUser.getId(),
                 currentUser.getId(),
-                List.of(44L,45L,46L),
+                List.of(44L, 45L, 46L),
                 createUpdatedEventChanges(eventDto, updateDto)
         ));
 
@@ -447,6 +447,7 @@ public class EventServiceImpl implements EventService {
 
     /**
      * Create changes for the new event
+     *
      * @param createDto
      * @return
      */
@@ -465,6 +466,7 @@ public class EventServiceImpl implements EventService {
 
     /**
      * Create changes for the updated event
+     *
      * @param eventDto
      * @param updateDto
      * @return
@@ -503,13 +505,14 @@ public class EventServiceImpl implements EventService {
 
     /**
      * Get event from redis cache
+     *
      * @param eventId
      * @return
      */
     private EventDto getByIdCached(Long eventId) {
         try {
             return redisTemplate.opsForValue().get(cacheKeyPrefix + eventId);
-        } catch(RedisConnectionFailureException ex) {
+        } catch (RedisConnectionFailureException ex) {
             log.warn("Failed to get the event from cache, Redis is unavailable {}",
                     ex.getMessage());
             return null;
@@ -518,6 +521,7 @@ public class EventServiceImpl implements EventService {
 
     /**
      * Add event to redis cache
+     *
      * @param eventId
      * @param fromDb
      */
@@ -528,7 +532,7 @@ public class EventServiceImpl implements EventService {
                             fromDb,
                             Long.parseLong(cacheTtl),
                             TimeUnit.MINUTES);
-        } catch(RedisConnectionFailureException ex) {
+        } catch (RedisConnectionFailureException ex) {
             log.warn("Failed to add the event to cache, Redis is unavailable {}",
                     ex.getMessage());
         }
@@ -536,6 +540,7 @@ public class EventServiceImpl implements EventService {
 
     /**
      * Delete event from redis cache
+     *
      * @param eventId
      */
     private void evictFromCache(Long eventId) {

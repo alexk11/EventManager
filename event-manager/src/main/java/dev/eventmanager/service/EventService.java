@@ -5,6 +5,7 @@ import dev.eventcommon.model.RegistrationDto;
 import dev.eventmanager.model.dto.event.EventCreateRequestDto;
 import dev.eventmanager.model.dto.event.EventSearchRequestDto;
 import dev.eventmanager.model.dto.event.EventUpdateRequestDto;
+
 import java.util.List;
 
 

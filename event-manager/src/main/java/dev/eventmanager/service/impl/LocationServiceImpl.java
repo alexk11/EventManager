@@ -1,8 +1,8 @@
 package dev.eventmanager.service.impl;
 
+import dev.eventcommon.exception.ServiceException;
 import dev.eventmanager.converter.LocationConverter;
 import dev.eventmanager.entity.LocationEntity;
-import dev.eventcommon.exception.ServiceException;
 import dev.eventmanager.model.dto.LocationDto;
 import dev.eventmanager.repository.LocationRepository;
 import dev.eventmanager.service.LocationService;
@@ -22,9 +22,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class LocationServiceImpl implements LocationService {
 
-    private final LocationRepository locationRepository;
-
     private static final String CACHE_KEY_PREFIX = "location:";
+    private final LocationRepository locationRepository;
 
     /**
      * Get all locations
@@ -47,15 +46,15 @@ public class LocationServiceImpl implements LocationService {
      */
     @Override
     @Caching(evict = {
-        @CacheEvict(
-                cacheNames = CACHE_KEY_PREFIX,
-                key = "'all'"
-        ),
-        @CacheEvict(
-                cacheNames = CACHE_KEY_PREFIX,
-                key = "'id:' + #result.id()",
-                condition = "#result != null"
-        )
+            @CacheEvict(
+                    cacheNames = CACHE_KEY_PREFIX,
+                    key = "'all'"
+            ),
+            @CacheEvict(
+                    cacheNames = CACHE_KEY_PREFIX,
+                    key = "'id:' + #result.id()",
+                    condition = "#result != null"
+            )
     })
     public LocationDto createLocation(LocationDto locationDto) {
         log.info("Creating new location with the name '{}'", locationDto.getName());
@@ -146,12 +145,12 @@ public class LocationServiceImpl implements LocationService {
         }
 
         LocationEntity toUpdate = LocationEntity.builder()
-            .id(locationId)
-            .name(updateDto.getName())
-            .address(updateDto.getAddress())
-            .capacity(updateDto.getCapacity())
-            .description(updateDto.getDescription())
-            .build();
+                .id(locationId)
+                .name(updateDto.getName())
+                .address(updateDto.getAddress())
+                .capacity(updateDto.getCapacity())
+                .description(updateDto.getDescription())
+                .build();
         return LocationConverter.toDto(locationRepository.save(toUpdate));
     }
 
