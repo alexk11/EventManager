@@ -13,10 +13,11 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class CleanupScheduler {
 
-    @Value("${app.notification.days-to-keep:7}")
+    private final NotificationRepository notificationRepository;
+
+    @Value("${scheduler.notification.days-to-keep:7}")
     private String daysToKeep;
 
-    private final NotificationRepository notificationRepository;
 
     @Scheduled(cron = "${event.status.cron:0 */3 * * * *}")
     public void cleanup() {
