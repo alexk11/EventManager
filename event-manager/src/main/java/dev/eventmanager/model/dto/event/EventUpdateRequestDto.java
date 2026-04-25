@@ -4,9 +4,7 @@ import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.math.BigDecimal;
@@ -16,6 +14,8 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Builder
+@RequiredArgsConstructor
+@AllArgsConstructor
 public class EventUpdateRequestDto {
 
     @NotBlank(message = "Name cannot be empty")
@@ -35,5 +35,5 @@ public class EventUpdateRequestDto {
     private int duration;
 
     @Min(value = 1, message = "Location id must be greater than zero")
-    private long locationId;
+    private Long locationId;
 }

@@ -21,11 +21,11 @@ public class KafkaMessageSender {
     public void send(EventChangeMessage message) {
         log.info("Sending event message = {}", message);
         eventTemplate.send(
-                eventTopic,
-                message.eventId(),
-                message)
-            .thenAccept(
-                    sendResult -> log.info("Event send success"));
-   }
+                        eventTopic,
+                        message.eventId(),
+                        message)
+                .thenAccept(
+                        sendResult -> log.info("Event send success"));
+    }
 
 }

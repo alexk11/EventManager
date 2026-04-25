@@ -1,7 +1,7 @@
 package dev.eventmanager.security;
 
-import dev.eventmanager.model.dto.ServerErrorDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.eventmanager.model.dto.ServerErrorDto;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;

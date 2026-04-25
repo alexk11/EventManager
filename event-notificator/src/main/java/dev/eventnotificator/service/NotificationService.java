@@ -6,7 +6,6 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.eventcommon.exception.ServiceException;
 import dev.eventcommon.kafka.ChangeItem;
 import dev.eventcommon.kafka.EventChangeMessage;
 import dev.eventnotificator.converter.NotificationConverter;
@@ -20,10 +19,13 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.*;
+
+import java.util.Base64;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 
 @Slf4j
@@ -33,6 +35,7 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final PayloadRepository payloadRepository;
+    private final NotificationCounterService notificationCounterService;
 
     @Value("${security.jwt.secret-key:secret-key}")
     private String secretKey;
@@ -44,11 +47,13 @@ public class NotificationService {
 
     @Transactional
     public void saveEvent(EventChangeMessage msg) {
-        log.info("Saving kafka message into db, message = {}", msg);
+        log.info("Saving kafka message to db, message = {}", msg);
 
-        // use (eventId, ownerId) as idempotency key and check if the event was already saved
-        if(payloadRepository.existsByEventIdAndOwnerId(msg.eventId(), msg.ownerId())) {
-            throw new ServiceException(HttpStatus.ALREADY_REPORTED.value(), "Event payload already saved");
+        // use (eventId, ownerId) as idempotency key
+        if (payloadRepository.existsByEventIdAndOwnerId(msg.eventId(), msg.ownerId())) {
+            log.info("Event payload is already in db: eventId = {}, userId = {}",
+                    msg.eventId(), msg.ownerId());
+            return;
         }
 
         NotificationEventPayloadDto payloadDto = NotificationEventPayloadDto.builder()
@@ -70,7 +75,10 @@ public class NotificationService {
                 .payloadId(saved.getId())
                 .build();
         notificationRepository.save(NotificationConverter.toNotificationEntity(notificationDto));
+
+        notificationCounterService.incrementUnread(msg.ownerId(), 1);
     }
+
 
     public List<NotificationDto> getUserNotifications(String token) {
         log.info("Get user's notifications");
@@ -80,6 +88,8 @@ public class NotificationService {
                 .toList();
     }
 
+
+    @Transactional
     public List<Long> markAsRead(String token, List<Long> notificationIds) {
         log.info("Mark user's notifications as read");
 
@@ -92,8 +102,11 @@ public class NotificationService {
                 .toList();
         notificationRepository.markAsReadByIdsAndUserId(userId, markIds);
 
+        notificationCounterService.syncUnreadFromDatabase(userId);
+
         return markIds;
     }
+
 
     private String getEventPayload(EventChangeMessage msg) {
         try {
@@ -103,11 +116,12 @@ public class NotificationService {
                     .changes(msg.changes().toArray(ChangeItem[]::new))
                     .build();
             return new ObjectMapper().writeValueAsString(payload);
-        } catch(JsonProcessingException ex) {
+        } catch (JsonProcessingException ex) {
             log.error("Convert object to string error: {}", ex.getMessage());
         }
         return null;
     }
+
 
     private Long validateAndGetUserId(String token) {
         Algorithm algorithm = Algorithm.HMAC256(secretKey);

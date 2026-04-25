@@ -2,6 +2,7 @@ package dev.eventnotificator.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.time.LocalDateTime;
 
 
