@@ -1,8 +1,8 @@
 package dev.eventmanager.service;
 
-import org.springframework.stereotype.Service;
-import dev.eventmanager.model.dto.UserDto;
 import dev.eventmanager.model.Role;
+import dev.eventmanager.model.dto.UserDto;
+import org.springframework.stereotype.Service;
 
 
 @Service

@@ -8,4 +8,5 @@ public record ErrorMessageResponse(
         String message,
         @JsonFormat(shape = JsonFormat.Shape.STRING)
         LocalDateTime dateTime
-) {}
+) {
+}

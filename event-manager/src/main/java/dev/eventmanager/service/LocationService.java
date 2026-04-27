@@ -1,105 +1,19 @@
 package dev.eventmanager.service;
 
-import dev.eventmanager.converter.LocationConverter;
-import dev.eventmanager.entity.LocationEntity;
-import dev.eventcommon.exception.ServiceException;
 import dev.eventmanager.model.dto.LocationDto;
-import dev.eventmanager.repository.LocationRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
+
 import java.util.List;
 
+public interface LocationService {
 
-@Slf4j
-@Service
-@RequiredArgsConstructor
-public class LocationService {
+    List<LocationDto> getLocations();
 
-    private final LocationRepository locationRepository;
+    LocationDto createLocation(LocationDto locationDto);
 
-    /**
-     * Get all locations
-     *
-     * @return
-     */
-    public List<LocationDto> getLocations() {
-        log.info("Getting all locations");
-        return locationRepository.findAll().stream()
-                .map(LocationConverter::toDto)
-                .toList();
-    }
+    LocationDto deleteLocation(Long locationId);
 
-    /**
-     * Create new location
-     *
-     * @return
-     */
-    public LocationDto createLocation(LocationDto locationDto) {
-        log.info("Creating new location with the name '{}'", locationDto.getName());
-        LocationEntity locationEntity =
-                locationRepository.save(LocationConverter.toEntity(locationDto));
-        return LocationConverter.toDto(locationEntity);
-    }
+    LocationDto getLocation(Long locationId);
 
-    /**
-     * Delete existing location
-     *
-     * @return
-     */
-    public LocationDto deleteLocation(long locationId) {
-        log.info("Deleting location with id = {}", locationId);
-        return locationRepository.findById(locationId)
-                .map(item -> {
-                    locationRepository.delete(item);
-                    return LocationConverter.toDto(item);
-                })
-                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Location not found"));
-    }
-
-    /**
-     * Get location by id
-     *
-     * @param locationId
-     * @return
-     */
-    public LocationDto getLocation(long locationId) {
-        log.info("Getting location by the id = {}", locationId);
-        return locationRepository
-                .findById(locationId)
-                .map(LocationConverter::toDto)
-                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Location not found"));
-    }
-
-    /**
-     * Update location
-     *
-     * @param locationId
-     * @param updateDto
-     * @return
-     */
-    public LocationDto updateLocation(long locationId, LocationDto updateDto) {
-        log.info("Updating location '{}'", locationId);
-
-        LocationEntity location = locationRepository
-                .findById(locationId)
-                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND.value(), "Location not found"));
-
-        if (updateDto.getCapacity() < location.getCapacity()) {
-            throw new ServiceException(
-                    HttpStatus.BAD_REQUEST.value(),
-                    "Location capacity cannot be decreased");
-        }
-
-        LocationEntity toUpdate = LocationEntity.builder()
-            .id(locationId)
-            .name(updateDto.getName())
-            .address(updateDto.getAddress())
-            .capacity(updateDto.getCapacity())
-            .description(updateDto.getDescription())
-            .build();
-        return LocationConverter.toDto(locationRepository.save(toUpdate));
-    }
+    LocationDto updateLocation(Long locationId, LocationDto updateDto);
 
 }

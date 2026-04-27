@@ -1,7 +1,7 @@
 package dev.eventmanager.service;
 
-import dev.eventmanager.entity.UserEntity;
 import dev.eventcommon.exception.ServiceException;
+import dev.eventmanager.entity.UserEntity;
 import dev.eventmanager.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

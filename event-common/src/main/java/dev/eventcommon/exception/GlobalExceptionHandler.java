@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(value = { ServiceException.class })
+    @ExceptionHandler(value = {ServiceException.class})
     protected ResponseEntity<ErrorMessageResponse> handleServiceException(ServiceException ex) {
         log.error("Service exception occurred: {}", ex.getMessage(), ex);
         var error = new ErrorMessageResponse(
@@ -24,7 +24,7 @@ public class GlobalExceptionHandler {
                 .body(error);
     }
 
-    @ExceptionHandler(value = { Exception.class })
+    @ExceptionHandler(value = {Exception.class})
     protected ResponseEntity<ErrorMessageResponse> handleGenericException(Exception ex) {
         log.error("Exception occurred: {}", ex.getMessage(), ex);
         var error = new ErrorMessageResponse(

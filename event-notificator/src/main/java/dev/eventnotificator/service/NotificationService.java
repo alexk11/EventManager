@@ -23,7 +23,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.*;
+
+import java.util.Base64;
+import java.util.List;
 
 
 @Slf4j
@@ -33,6 +35,8 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final PayloadRepository payloadRepository;
+    private final NotificationCounterService notificationCounterService;
+    private final ObjectMapper objectMapper;
 
     @Value("${security.jwt.secret-key:secret-key}")
     private String secretKey;
@@ -44,11 +48,13 @@ public class NotificationService {
 
     @Transactional
     public void saveEvent(EventChangeMessage msg) {
-        log.info("Saving kafka message into db, message = {}", msg);
+        log.info("Saving kafka message to db, message = {}", msg);
 
-        // use (eventId, ownerId) as idempotency key and check if the event was already saved
-        if(payloadRepository.existsByEventIdAndOwnerId(msg.eventId(), msg.ownerId())) {
-            throw new ServiceException(HttpStatus.ALREADY_REPORTED.value(), "Event payload already saved");
+        // use (eventId, ownerId) as idempotency key
+        if (payloadRepository.existsByEventIdAndOwnerId(msg.eventId(), msg.ownerId())) {
+            log.info("Event payload is already in db: eventId = {}, userId = {}",
+                    msg.eventId(), msg.ownerId());
+            return;
         }
 
         NotificationEventPayloadDto payloadDto = NotificationEventPayloadDto.builder()
@@ -70,7 +76,10 @@ public class NotificationService {
                 .payloadId(saved.getId())
                 .build();
         notificationRepository.save(NotificationConverter.toNotificationEntity(notificationDto));
+
+        notificationCounterService.incrementUnread(msg.ownerId(), 1);
     }
+
 
     public List<NotificationDto> getUserNotifications(String token) {
         log.info("Get user's notifications");
@@ -80,20 +89,20 @@ public class NotificationService {
                 .toList();
     }
 
+
+    @Transactional
     public List<Long> markAsRead(String token, List<Long> notificationIds) {
         log.info("Mark user's notifications as read");
 
         Long userId = validateAndGetUserId(token);
 
-        Set<Long> idsSet = new HashSet<>(notificationIds);
-        List<Long> markIds = notificationRepository.findByUserIdAndIsReadFalse(userId).stream()
-                .toList().stream()
-                .filter(idsSet::contains)
-                .toList();
-        notificationRepository.markAsReadByIdsAndUserId(userId, markIds);
+        notificationRepository.markAsReadByIdsAndUserId(userId, notificationIds);
 
-        return markIds;
+        notificationCounterService.syncUnreadFromDatabase(userId);
+
+        return notificationIds;
     }
+
 
     private String getEventPayload(EventChangeMessage msg) {
         try {
@@ -102,12 +111,15 @@ public class NotificationService {
                     .changedById(msg.changedById())
                     .changes(msg.changes().toArray(ChangeItem[]::new))
                     .build();
-            return new ObjectMapper().writeValueAsString(payload);
-        } catch(JsonProcessingException ex) {
+            return objectMapper.writeValueAsString(payload);
+        } catch (JsonProcessingException ex) {
             log.error("Convert object to string error: {}", ex.getMessage());
+            throw new ServiceException(
+                    HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                    "Failed to extract payload from from event with id = " + msg.eventId());
         }
-        return null;
     }
+
 
     private Long validateAndGetUserId(String token) {
         Algorithm algorithm = Algorithm.HMAC256(secretKey);

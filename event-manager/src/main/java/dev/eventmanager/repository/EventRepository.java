@@ -46,21 +46,38 @@ public interface EventRepository extends JpaRepository<EventEntity, Long> {
 
     List<EventEntity> findByOwnerId(Long ownerId);
 
-    @Query(value = "SELECT e.id FROM Events e WHERE" +
-                   " e.status = :status" +
-                   " AND e.date <= NOW()" +
-                   " AND e.date + INTERVAL '1 minute' * e.duration > NOW()",
+    @Query(value = "SELECT e.id FROM Events e" +
+            " WHERE e.status = :status" +
+            " AND e.date <= NOW()" +
+            " AND e.date + INTERVAL '1 minute' * e.duration > NOW()",
             nativeQuery = true)
     List<Long> findStartedEventsWithStatus(
             @Param("status") EventStatus status);
 
+    @Query(value = "UPDATE Events e SET e.status = :newStatus" +
+            " WHERE e.status = :oldStatus" +
+            " AND e.date <= NOW()" +
+            " AND e.date + INTERVAL '1 minute' * e.duration > NOW()",
+            nativeQuery = true)
+    void updateStartedEventsWithStatus(
+            @Param("oldStatus") EventStatus oldStatus,
+            @Param("newStatus") EventStatus newStatus);
 
-    @Query(value = "SELECT e.id FROM Events e WHERE" +
-                   " e.status = :status" +
-                   " AND e.date + INTERVAL '1 minute' * e.duration < NOW()",
+
+    @Query(value = "SELECT e.id FROM Events e" +
+            " WHERE e.status = :status" +
+            " AND e.date + INTERVAL '1 minute' * e.duration < NOW()",
             nativeQuery = true)
     List<Long> findFinishedEventsWithStatus(
             @Param("status") EventStatus eventStatus);
+
+    @Query(value = "UPDATE Events e SET e.status = :newStatus" +
+            " WHERE e.status = :oldStatus" +
+            " AND e.date + INTERVAL '1 minute' * e.duration < NOW()",
+            nativeQuery = true)
+    void updateFinishedEventsWithStatus(
+            @Param("oldStatus") EventStatus oldStatus,
+            @Param("newStatus") EventStatus newStatus);
 
 
     @Modifying
@@ -72,12 +89,13 @@ public interface EventRepository extends JpaRepository<EventEntity, Long> {
 
     @Query(value = """
             SELECT count(*) > 0 FROM Events WHERE location_id = :locationId
-             AND status != 2
+             AND status != :excludeStatus
              AND date < :end
              AND date + (duration * INTERVAL '1 minute') > :start
             """, nativeQuery = true)
     boolean isTimeslotBusy(
             @Param("locationId") Long locationId,
+            @Param("excludeStatus") EventStatus excludeStatus,
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end
     );

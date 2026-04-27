@@ -13,12 +13,13 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class CleanupScheduler {
 
-    @Value("${app.notification.days-to-keep:7}")
-    private String daysToKeep;
-
     private final NotificationRepository notificationRepository;
 
-    @Scheduled(cron = "${event.status.cron:0 */3 * * * *}")
+    @Value("${scheduler.notification.days-to-keep:7}")
+    private String daysToKeep;
+
+
+    @Scheduled(cron = "${notification.cleanup.cron:0 0 1 * * ?}")
     public void cleanup() {
         log.info("Deleting notifications older '{}' days", daysToKeep);
         notificationRepository.deleteReadNotificationsOlderDays(Integer.parseInt(daysToKeep));
