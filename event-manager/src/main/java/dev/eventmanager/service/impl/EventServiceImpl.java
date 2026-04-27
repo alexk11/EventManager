@@ -72,6 +72,7 @@ public class EventServiceImpl implements EventService {
      * @return
      */
     @Override
+    @Transactional
     public EventDto createEvent(EventCreateRequestDto createDto) {
         log.info("Creating event '{}'", createDto.getName());
 
@@ -124,6 +125,7 @@ public class EventServiceImpl implements EventService {
      * @param eventId
      */
     @Override
+    @Transactional
     public void deleteEvent(Long eventId) {
         log.info("Deleting event with id = '{}'", eventId);
 
@@ -196,6 +198,7 @@ public class EventServiceImpl implements EventService {
      * @return
      */
     @Override
+    @Transactional
     public EventDto updateEvent(Long eventId, EventUpdateRequestDto updateDto) {
         log.info("Updating event with id = '{}'", eventId);
 
@@ -288,7 +291,7 @@ public class EventServiceImpl implements EventService {
                 searchDto.getDurationMin(),
                 searchDto.getDurationMax(),
                 searchDto.getLocationId(),
-                EventStatus.valueOf(searchDto.getEventStatus())
+                searchDto.getEventStatus()
         ).stream().map(EventConverter::toDto).toList();
     }
 
@@ -340,11 +343,9 @@ public class EventServiceImpl implements EventService {
                     "Event has been canceled");
         }
 
-        for (RegistrationEntity re : event.getRegistrations()) {
-            if (re.getUserId().equals(userEntity.getId())) {
-                throw new ServiceException(HttpStatus.BAD_REQUEST.value(),
-                        "User already registered");
-            }
+        if (registrationRepository.existsByUserIdAndEventId(userEntity.getId(), eventId)) {
+            throw new ServiceException(HttpStatus.BAD_REQUEST.value(),
+                    "User already registered");
         }
 
         if (event.getMaxPlaces().equals(event.getOccupiedPlaces())) {

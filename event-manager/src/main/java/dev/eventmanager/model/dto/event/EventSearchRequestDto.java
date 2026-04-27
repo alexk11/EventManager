@@ -1,5 +1,6 @@
 package dev.eventmanager.model.dto.event;
 
+import dev.eventmanager.model.EventStatus;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
@@ -46,5 +47,5 @@ public class EventSearchRequestDto {
     @Min(value = 1, message = "Location Id must be greater than zero")
     private int locationId;
 
-    private String eventStatus;
+    private EventStatus eventStatus;
 }
