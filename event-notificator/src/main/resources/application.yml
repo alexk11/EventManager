@@ -39,9 +39,13 @@ spring:
       port: ${SPRING_REDIS_PORT:6379}
       cache-ttl-expiration-minutes: 30
 
-  scheduler:
-    notification:
-      days-to-keep: 7
+scheduler:
+  notification:
+    days-to-keep: 7
+
+notification:
+  cleanup:
+    cron: "0 0 1 * * ?"
 
 security:
   jwt:

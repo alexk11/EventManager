@@ -543,10 +543,11 @@ public class EventServiceImpl implements EventService {
      *
      * @param eventId
      */
-    private void evictFromCache(Long eventId) {
+    @Override
+    public void evictFromCache(Long eventId) {
         try {
             redisTemplate.delete(cacheKeyPrefix + eventId);
-            log.info("Cache invalidated for deleted event: id = {}", eventId);
+            log.info("Cache invalidated for the event: id = {}", eventId);
         } catch (RedisConnectionFailureException ex) {
             log.warn("Failed to evict event from cache, Redis is unavailable {}",
                     ex.getMessage());

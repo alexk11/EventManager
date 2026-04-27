@@ -19,7 +19,7 @@ public class CleanupScheduler {
     private String daysToKeep;
 
 
-    @Scheduled(cron = "${event.status.cron:0 */3 * * * *}")
+    @Scheduled(cron = "${notification.cleanup.cron:0 0 1 * * ?}")
     public void cleanup() {
         log.info("Deleting notifications older '{}' days", daysToKeep);
         notificationRepository.deleteReadNotificationsOlderDays(Integer.parseInt(daysToKeep));

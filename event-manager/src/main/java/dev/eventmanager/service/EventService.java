@@ -19,6 +19,8 @@ public interface EventService {
 
     EventDto updateEvent(Long eventId, EventUpdateRequestDto updateDto);
 
+    void evictFromCache(Long eventId);
+
     List<EventDto> searchEvents(EventSearchRequestDto searchDto);
 
     List<EventDto> searchUserEvents();

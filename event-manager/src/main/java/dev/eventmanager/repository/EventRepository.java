@@ -54,6 +54,15 @@ public interface EventRepository extends JpaRepository<EventEntity, Long> {
     List<Long> findStartedEventsWithStatus(
             @Param("status") EventStatus status);
 
+    @Query(value = "UPDATE Events e SET e.status = :newStatus" +
+            " WHERE e.status = :oldStatus" +
+            " AND e.date <= NOW()" +
+            " AND e.date + INTERVAL '1 minute' * e.duration > NOW()",
+            nativeQuery = true)
+    void updateStartedEventsWithStatus(
+            @Param("oldStatus") EventStatus oldStatus,
+            @Param("newStatus") EventStatus newStatus);
+
 
     @Query(value = "SELECT e.id FROM Events e" +
             " WHERE e.status = :status" +
@@ -61,6 +70,14 @@ public interface EventRepository extends JpaRepository<EventEntity, Long> {
             nativeQuery = true)
     List<Long> findFinishedEventsWithStatus(
             @Param("status") EventStatus eventStatus);
+
+    @Query(value = "UPDATE Events e SET e.status = :newStatus" +
+            " WHERE e.status = :oldStatus" +
+            " AND e.date + INTERVAL '1 minute' * e.duration < NOW()",
+            nativeQuery = true)
+    void updateFinishedEventsWithStatus(
+            @Param("oldStatus") EventStatus oldStatus,
+            @Param("newStatus") EventStatus newStatus);
 
 
     @Modifying

@@ -6,6 +6,7 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.eventcommon.exception.ServiceException;
 import dev.eventcommon.kafka.ChangeItem;
 import dev.eventcommon.kafka.EventChangeMessage;
 import dev.eventnotificator.converter.NotificationConverter;
@@ -19,13 +20,12 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Base64;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 
 @Slf4j
@@ -36,6 +36,7 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final PayloadRepository payloadRepository;
     private final NotificationCounterService notificationCounterService;
+    private final ObjectMapper objectMapper;
 
     @Value("${security.jwt.secret-key:secret-key}")
     private String secretKey;
@@ -95,16 +96,11 @@ public class NotificationService {
 
         Long userId = validateAndGetUserId(token);
 
-        Set<Long> idsSet = new HashSet<>(notificationIds);
-        List<Long> markIds = notificationRepository.findByUserIdAndIsReadFalse(userId).stream()
-                .toList().stream()
-                .filter(idsSet::contains)
-                .toList();
-        notificationRepository.markAsReadByIdsAndUserId(userId, markIds);
+        notificationRepository.markAsReadByIdsAndUserId(userId, notificationIds);
 
         notificationCounterService.syncUnreadFromDatabase(userId);
 
-        return markIds;
+        return notificationIds;
     }
 
 
@@ -115,11 +111,13 @@ public class NotificationService {
                     .changedById(msg.changedById())
                     .changes(msg.changes().toArray(ChangeItem[]::new))
                     .build();
-            return new ObjectMapper().writeValueAsString(payload);
+            return objectMapper.writeValueAsString(payload);
         } catch (JsonProcessingException ex) {
             log.error("Convert object to string error: {}", ex.getMessage());
+            throw new ServiceException(
+                    HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                    "Failed to extract payload from from event with id = " + msg.eventId());
         }
-        return null;
     }
 
 

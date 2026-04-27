@@ -27,7 +27,7 @@ public interface NotificationRepository extends JpaRepository<NotificationEntity
     @Modifying
     @Transactional
     @Query(value = "UPDATE Notifications SET is_read = true, read_at = NOW() WHERE " +
-            "id IN (:ids) AND user_id = :userId",
+            "id IN (:ids) AND user_id = :userId AND is_read = false",
             nativeQuery = true)
     void markAsReadByIdsAndUserId(@Param("userId") long userId, @Param("ids") List<Long> ids);
 

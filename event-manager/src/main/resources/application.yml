@@ -54,4 +54,4 @@ logging:
 
 event:
   status:
-    cron: "0 */3 * * * *"
+    cron: "0 */30 * * * *"
